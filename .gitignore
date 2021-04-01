@@ -1,0 +1,9 @@
+*~
+*\#*
+*.a
+*.o
+*.so
+*.su
+*.out
+/test
+/interactive-test
