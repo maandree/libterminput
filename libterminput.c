@@ -143,13 +143,19 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 		switch (keylen) {
 		case 2:
 			switch (ctx->key[1]) {
+			case '@': input->keypress.key = LIBTERMINPUT_INS;   break;
 			case 'A': input->keypress.key = LIBTERMINPUT_UP;    break;
 			case 'B': input->keypress.key = LIBTERMINPUT_DOWN;  break;
 			case 'C': input->keypress.key = LIBTERMINPUT_RIGHT; break;
 			case 'D': input->keypress.key = LIBTERMINPUT_LEFT;  break;
 			case 'E': input->keypress.key = LIBTERMINPUT_BEGIN; break;
+			case 'F': input->keypress.key = LIBTERMINPUT_END;   break;
 			case 'G': input->keypress.key = LIBTERMINPUT_BEGIN; break;
+			case 'H': input->keypress.key = LIBTERMINPUT_HOME;  break;
+			case 'M': input->keypress.key = LIBTERMINPUT_MACRO; break;
 			case 'P': input->keypress.key = LIBTERMINPUT_PAUSE; break;
+			case 'U': input->keypress.key = LIBTERMINPUT_NEXT;  break;
+			case 'V': input->keypress.key = LIBTERMINPUT_PRIOR; break;
 			case 'Z':
 				input->keypress.key = LIBTERMINPUT_TAB;
 				input->keypress.mods |= LIBTERMINPUT_SHIFT;
