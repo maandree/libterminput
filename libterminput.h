@@ -60,7 +60,10 @@ enum libterminput_key {
 
 enum libterminput_type {
 	LIBTERMINPUT_NONE,
-	LIBTERMINPUT_KEYPRESS
+	LIBTERMINPUT_KEYPRESS,
+	LIBTERMINPUT_BRACKETED_PASTE_START,
+	LIBTERMINPUT_BRACKETED_PASTE_END,
+	LIBTERMINPUT_TEXT
 };
 
 struct libterminput_keypress {
@@ -71,9 +74,16 @@ struct libterminput_keypress {
 	char symbol[7];               /* use if .key == LIBTERMINPUT_SYMBOL */
 };
 
+struct libterminput_text {
+	enum libterminput_type type;
+	size_t nbytes;
+	char bytes[512];
+};
+
 union libterminput_input {
 	enum libterminput_type type;
-	struct libterminput_keypress keypress;
+	struct libterminput_keypress keypress; /* use if .type == LIBTERMINPUT_KEYPRESS */
+	struct libterminput_text text;         /* use if .type == LIBTERMINPUT_TEXT */
 };
 
 
@@ -83,13 +93,15 @@ union libterminput_input {
 struct libterminput_state {
 	int inited; /* whether the input in initialised, not this struct */
 	enum libterminput_mod mods;
+	size_t stored_head;
+	size_t stored_tail;
+	char bracketed_paste;
 	char meta;
 	char n;
-	char have_stored;
 	char npartial;
-	char stored;
 	char partial[7];
 	char key[44];
+	char stored[512];
 };
 
 

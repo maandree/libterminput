@@ -86,6 +86,14 @@ main(void)
 			printf("\t%s: %s\n", "meta",  (input.keypress.mods & LIBTERMINPUT_META)  ? "yes" : "no");
 			printf("\t%s: %s\n", "ctrl",  (input.keypress.mods & LIBTERMINPUT_CTRL)  ? "yes" : "no");
 			printf("\t%s: %s (%llu)\n", "will repeat", input.keypress.times > 1 ? "yes" : "no", input.keypress.times);
+		} else if (input.type == LIBTERMINPUT_BRACKETED_PASTE_START) {
+			printf("bracketed paste start\n");
+		} else if (input.type == LIBTERMINPUT_BRACKETED_PASTE_END) {
+			printf("bracketed paste end\n");
+		} else if (input.type == LIBTERMINPUT_TEXT) {
+			printf("text:\n");
+			printf("\tlength: %zu\n", input.text.nbytes);
+			printf("\tdata: %.512s\n", input.text.bytes);
 		} else {
 			printf("other\n");
 		}

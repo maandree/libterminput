@@ -21,9 +21,10 @@ read_input(int fd, struct input *input, struct libterminput_state *ctx)
 	int r;
 
 	/* Get next byte from input */
-	if (ctx->have_stored) {
-		ctx->have_stored = 0;
-		c = (unsigned char)ctx->stored;
+	if (ctx->stored_head != ctx->stored_tail) {
+		c = ((unsigned char *)ctx->stored)[ctx->stored_tail++];
+		if (ctx->stored_tail == ctx->stored_head)
+			ctx->stored_tail = ctx->stored_head = 0;
 	} else {
 		r = read(fd, &c, 1);
 		if (r <= 0)
@@ -39,8 +40,7 @@ read_input(int fd, struct input *input, struct libterminput_state *ctx)
 			ctx->n = 0;
 			ctx->npartial = 0;
 			ctx->mods = 0;
-			ctx->have_stored = 1;
-			ctx->stored = (char)c;
+			ctx->stored[ctx->stored_head++] = c;
 			strcpy(input->symbol, ctx->partial);
 			return 1;
 		} else {
@@ -185,6 +185,14 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				case 32: input->keypress.key = LIBTERMINPUT_F6;    break;
 				case 33: input->keypress.key = LIBTERMINPUT_F7;    break;
 				case 34: input->keypress.key = LIBTERMINPUT_F8;    break;
+				case 200:
+					ctx->bracketed_paste = 1;
+					input->type = LIBTERMINPUT_BRACKETED_PASTE_START;
+					return;
+				case 201:
+					ctx->bracketed_paste = 0;
+					input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
+					return;
 				default:
 					input->type = LIBTERMINPUT_NONE;
 					return;
@@ -251,6 +259,67 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 }
 
 
+static int
+read_bracketed_paste(int fd, union libterminput_input *input, struct libterminput_state *ctx)
+{
+	ssize_t r;
+	size_t n;
+
+	/* Unfortunately there is no standard for how to handle pasted ESC's,
+	 * not even ESC [201~ or ESC ESC. Terminates seem to just paste ESC as
+	 * is, so we cannot do anything about them, however, a good terminal
+	 * would stop the paste at the ~ in ESC [201~, send ~ as normal, and
+	 * then continue the brackated paste mode. */
+
+	if (ctx->stored_head - ctx->stored_tail) {
+		for (n = ctx->stored_tail; n + 6 < ctx->stored_head; n++) {
+			if (ctx->stored[n + 0] == '\033' && ctx->stored[n + 1] == '[' && ctx->stored[n + 2] == '2' &&
+			    ctx->stored[n + 3] == '0'    && ctx->stored[n + 4] == '0' && ctx->stored[n + 5] == '~')
+				break;
+		}
+		if (n == ctx->stored_tail && ctx->stored_head - ctx->stored_tail >= 6) {
+			ctx->stored_tail += 6;
+			if (ctx->stored_tail == ctx->stored_head)
+				ctx->stored_tail = ctx->stored_head = 0;
+			input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
+			return 0;
+		}
+		input->text.nbytes = ctx->stored_head - ctx->stored_tail;
+		input->text.type = LIBTERMINPUT_TEXT;
+		memcpy(input->text.bytes, &ctx->stored[ctx->stored_tail], n - ctx->stored_tail);
+		ctx->stored_tail = n;
+		if (ctx->stored_tail == ctx->stored_head)
+			ctx->stored_tail = ctx->stored_head = 0;
+		return 0;
+	}
+
+	r = read(fd, input->text.bytes, sizeof(input->text.bytes));
+	if (r <= 0)
+		return (int)r;
+
+	input->text.nbytes = (size_t)r;
+	for (n = 0; n + 6 < input->text.nbytes; n++) {
+		if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2' &&
+		    input->text.bytes[n + 3] == '0'    && input->text.bytes[n + 4] == '0' && input->text.bytes[n + 5] == '~')
+			break;
+	}
+	if (!n && input->text.nbytes >= 6) {
+		ctx->stored_tail = 0;
+		ctx->stored_head = input->text.nbytes - 6;
+		memcpy(ctx->stored, &input->text.bytes[6], ctx->stored_head);
+		if (ctx->stored_tail == ctx->stored_head)
+			ctx->stored_tail = ctx->stored_head = 0;
+		input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
+		return 0;
+	}
+	ctx->stored_tail = 0;
+	ctx->stored_head = input->text.nbytes - n;
+	input->text.nbytes = n;
+	input->text.type = LIBTERMINPUT_TEXT;
+	return 0;
+}
+
+
 int
 libterminput_read(int fd, union libterminput_input *input, struct libterminput_state *ctx)
 {
@@ -266,6 +335,9 @@ libterminput_read(int fd, union libterminput_input *input, struct libterminput_s
 		input->keypress.times -= 1;
 		return 1;
 	}
+
+	if (ctx->bracketed_paste)
+		return read_bracketed_paste(fd, input, ctx);
 
 	r = read_input(fd, &ret, ctx);
 	if (r <= 0)
