@@ -175,7 +175,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 		switch (keylen) {
 		case 2:
 			switch (ctx->key[1]) {
-			case '@': input->keypress.key = LIBTERMINPUT_INS;   break;
+			/* case '@': input->keypress.key = LIBTERMINPUT_INS;   break;  (incompatible with rxvt) */
 			case 'A': input->keypress.key = LIBTERMINPUT_UP;    break;
 			case 'B': input->keypress.key = LIBTERMINPUT_DOWN;  break;
 			case 'C': input->keypress.key = LIBTERMINPUT_RIGHT; break;
@@ -185,11 +185,30 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'G': input->keypress.key = LIBTERMINPUT_BEGIN; break;
 			case 'H': input->keypress.key = LIBTERMINPUT_HOME;  break;
 			case 'M': input->keypress.key = LIBTERMINPUT_MACRO; break;
-			case 'P': input->keypress.key = LIBTERMINPUT_PAUSE; break;
+			case 'P': input->keypress.key = LIBTERMINPUT_F1;    break;
+			case 'Q': input->keypress.key = LIBTERMINPUT_F2;    break;
+			case 'R': input->keypress.key = LIBTERMINPUT_F3;    break;
+			case 'S': input->keypress.key = LIBTERMINPUT_F4;    break;
 			case 'U': input->keypress.key = LIBTERMINPUT_NEXT;  break;
 			case 'V': input->keypress.key = LIBTERMINPUT_PRIOR; break;
 			case 'Z':
 				input->keypress.key = LIBTERMINPUT_TAB;
+				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				break;
+			case 'a':
+				input->keypress.key = LIBTERMINPUT_UP;
+				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				break;
+			case 'b':
+				input->keypress.key = LIBTERMINPUT_DOWN;
+				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				break;
+			case 'c':
+				input->keypress.key = LIBTERMINPUT_RIGHT;
+				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				break;
+			case 'd':
+				input->keypress.key = LIBTERMINPUT_LEFT;
 				input->keypress.mods |= LIBTERMINPUT_SHIFT;
 				break;
 			case 'u':
@@ -200,7 +219,21 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				encode_utf8(nums[0], input->keypress.symbol);
 				input->keypress.times = 1;
 				break;
+			case '$':
+				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				if (nums[0] >= 200)
+					goto suppress;
+				goto tilde_case;
+			case '@':
+				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				/* fall through */
+			case '^':
+				input->keypress.mods |= LIBTERMINPUT_CTRL;
+				if (nums[0] >= 200)
+					goto suppress;
+				/* fall through */
 			case '~':
+			tilde_case:
 				input->keypress.times = 1;
 				switch (nums[0]) {
 				case  1: input->keypress.key = LIBTERMINPUT_HOME;  break;
@@ -241,15 +274,13 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
 					return;
 				default:
-					input->type = LIBTERMINPUT_NONE;
-					return;
+					goto suppress;
 				}
 				if (25 <= nums[0] && nums[0] <= 34)
 					input->keypress.mods |= LIBTERMINPUT_SHIFT;
 				break;
 			default:
-				input->type = LIBTERMINPUT_NONE;
-				break;
+				goto suppress;
 			}
 			break;
 		case 3:
@@ -260,50 +291,52 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'D': input->keypress.key = LIBTERMINPUT_F4; break;
 			case 'E': input->keypress.key = LIBTERMINPUT_F5; break;
 			default:
-				input->type = LIBTERMINPUT_NONE;
-				break;
+				goto suppress;
 			}
 			break;
 		default:
-			input->type = LIBTERMINPUT_NONE;
-			break;
+			goto suppress;
 		}
 		break;
 
 	case 'O':
 		switch (!ctx->key[2] ? ctx->key[1] : 0) {
-		case 'A': input->keypress.key = LIBTERMINPUT_UP;           break;
-		case 'B': input->keypress.key = LIBTERMINPUT_DOWN;         break;
-		case 'C': input->keypress.key = LIBTERMINPUT_RIGHT;        break;
-		case 'D': input->keypress.key = LIBTERMINPUT_LEFT;         break;
-		case 'H': input->keypress.key = LIBTERMINPUT_HOME;         break;
-		case 'F': input->keypress.key = LIBTERMINPUT_END;          break;
-		case 'P': input->keypress.key = LIBTERMINPUT_F1;           break;
-		case 'Q': input->keypress.key = LIBTERMINPUT_F2;           break;
-		case 'R': input->keypress.key = LIBTERMINPUT_F3;           break;
-		case 'S': input->keypress.key = LIBTERMINPUT_F4;           break;
-		case 'p': input->keypress.key = LIBTERMINPUT_KEYPAD_0;     break;
-		case 'q': input->keypress.key = LIBTERMINPUT_KEYPAD_1;     break;
-		case 'r': input->keypress.key = LIBTERMINPUT_KEYPAD_2;     break;
-		case 's': input->keypress.key = LIBTERMINPUT_KEYPAD_3;     break;
-		case 't': input->keypress.key = LIBTERMINPUT_KEYPAD_4;     break;
-		case 'u': input->keypress.key = LIBTERMINPUT_KEYPAD_5;     break;
-		case 'v': input->keypress.key = LIBTERMINPUT_KEYPAD_6;     break;
-		case 'w': input->keypress.key = LIBTERMINPUT_KEYPAD_7;     break;
-		case 'x': input->keypress.key = LIBTERMINPUT_KEYPAD_8;     break;
-		case 'y': input->keypress.key = LIBTERMINPUT_KEYPAD_9;     break;
-		case 'm': input->keypress.key = LIBTERMINPUT_KEYPAD_MINUS; break;
-		case 'l': input->keypress.key = LIBTERMINPUT_KEYPAD_COMMA; break;
-		case 'b': input->keypress.key = LIBTERMINPUT_KEYPAD_POINT; break;
-		case 'M': input->keypress.key = LIBTERMINPUT_KEYPAD_ENTER; break;
+		case 'A': input->keypress.key = LIBTERMINPUT_UP;              break;
+		case 'B': input->keypress.key = LIBTERMINPUT_DOWN;            break;
+		case 'C': input->keypress.key = LIBTERMINPUT_RIGHT;           break;
+		case 'D': input->keypress.key = LIBTERMINPUT_LEFT;            break;
+		case 'H': input->keypress.key = LIBTERMINPUT_HOME;            break;
+		case 'F': input->keypress.key = LIBTERMINPUT_END;             break;
+		case 'P': input->keypress.key = LIBTERMINPUT_F1;              break;
+		case 'Q': input->keypress.key = LIBTERMINPUT_F2;              break;
+		case 'R': input->keypress.key = LIBTERMINPUT_F3;              break;
+		case 'S': input->keypress.key = LIBTERMINPUT_F4;              break;
+		case 'p': input->keypress.key = LIBTERMINPUT_KEYPAD_0;        break;
+		case 'q': input->keypress.key = LIBTERMINPUT_KEYPAD_1;        break;
+		case 'r': input->keypress.key = LIBTERMINPUT_KEYPAD_2;        break;
+		case 's': input->keypress.key = LIBTERMINPUT_KEYPAD_3;        break;
+		case 't': input->keypress.key = LIBTERMINPUT_KEYPAD_4;        break;
+		case 'u': input->keypress.key = LIBTERMINPUT_KEYPAD_5;        break;
+		case 'v': input->keypress.key = LIBTERMINPUT_KEYPAD_6;        break;
+		case 'w': input->keypress.key = LIBTERMINPUT_KEYPAD_7;        break;
+		case 'x': input->keypress.key = LIBTERMINPUT_KEYPAD_8;        break;
+		case 'y': input->keypress.key = LIBTERMINPUT_KEYPAD_9;        break;
+		case 'k': input->keypress.key = LIBTERMINPUT_KEYPAD_PLUS;     break;
+		case 'm': input->keypress.key = LIBTERMINPUT_KEYPAD_MINUS;    break;
+		case 'j': input->keypress.key = LIBTERMINPUT_KEYPAD_TIMES;    break;
+		case 'o': input->keypress.key = LIBTERMINPUT_KEYPAD_DIVISION; break;
+		case 'n': input->keypress.key = LIBTERMINPUT_KEYPAD_DECIMAL;  break;
+		case 'l': input->keypress.key = LIBTERMINPUT_KEYPAD_COMMA;    break;
+		case 'b': input->keypress.key = LIBTERMINPUT_KEYPAD_POINT;    break;
+		case 'M': input->keypress.key = LIBTERMINPUT_KEYPAD_ENTER;    break;
 		default:
-			input->type = LIBTERMINPUT_NONE;
-			break;
+			goto suppress;
 		}
 		break;
 
 	default:
-		/* This shouldn't happen */
+		/* This shouldn't happen (without goto) */
+	suppress:
 		input->type = LIBTERMINPUT_NONE;
 		break;
 	}		
