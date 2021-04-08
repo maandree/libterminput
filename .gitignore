@@ -6,5 +6,7 @@
 *.so
 *.su
 *.out
+*.dll
+*.dylib
 /test
 /interactive-test
