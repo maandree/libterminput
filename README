@@ -1,0 +1,7 @@
+NAME
+	libterminput - A terminal input parsing library
+
+DESCRIPTION
+	libterminput is a small library that parses input from the
+	terminal. libterminput does not use terminfo, but recognises
+	common sequences.
