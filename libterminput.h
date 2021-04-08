@@ -18,7 +18,6 @@ enum libterminput_key {
 	LIBTERMINPUT_RIGHT,
 	LIBTERMINPUT_LEFT,
 	LIBTERMINPUT_BEGIN, /* keypad 5 without numlock */
-	LIBTERMINPUT_MACRO,
 	LIBTERMINPUT_TAB,   /* backtab if with shift */
 	LIBTERMINPUT_F1,
 	LIBTERMINPUT_F2,

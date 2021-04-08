@@ -184,7 +184,6 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'F': input->keypress.key = LIBTERMINPUT_END;   break;
 			case 'G': input->keypress.key = LIBTERMINPUT_BEGIN; break;
 			case 'H': input->keypress.key = LIBTERMINPUT_HOME;  break;
-			case 'M': input->keypress.key = LIBTERMINPUT_MACRO; break;
 			case 'P': input->keypress.key = LIBTERMINPUT_F1;    break;
 			case 'Q': input->keypress.key = LIBTERMINPUT_F2;    break;
 			case 'R': input->keypress.key = LIBTERMINPUT_F3;    break;
