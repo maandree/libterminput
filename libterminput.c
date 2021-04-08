@@ -31,6 +31,7 @@ read_input(int fd, struct input *input, struct libterminput_state *ctx)
 			return r;
 	}
 
+again:
 	if (ctx->n) {
 		/* Continuation of multibyte-character */
 		if ((c & 0xC0) != 0x80) {
@@ -88,8 +89,16 @@ read_input(int fd, struct input *input, struct libterminput_state *ctx)
 		}
 		ctx->partial[0] = c;
 		ctx->npartial = 1;
+	} else if (c & 0x80) {
+		/* 8th bit set to signify META */
+		c ^= 0x80;
+		ctx->mods |= LIBTERMINPUT_META;
+		if (c == 033)
+			goto single_byte;
+		goto again;
 	} else {
-		/* Single-byte-character or stray multi-byte continuation byte */
+	single_byte:
+		/* Single-byte-character */
 		input->symbol[0] = c;
 		input->symbol[1] = '\0';
 		input->mods = ctx->mods;
@@ -100,6 +109,29 @@ read_input(int fd, struct input *input, struct libterminput_state *ctx)
 	input->symbol[0] = '\0';
 	input->mods = -1;
 	return 1;
+}
+
+
+static void
+encode_utf8(unsigned long long int codepoint, char buffer[7])
+{
+	static const char masks[6] = {0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC};
+	static const unsigned long long int limits[6] = {
+		1ULL << (7 + 0 * 6),
+		1ULL << (5 + 1 * 6),
+		1ULL << (4 + 2 * 6),
+		1ULL << (3 + 3 * 6),
+		1ULL << (2 + 4 * 6),
+		1ULL << (1 + 5 * 6)
+	};
+	size_t len;
+	for (len = 0; codepoint >= limits[len]; len++);
+	buffer[0] = masks[len];
+	len += 1;
+	buffer[len] = '\0';
+	for (; --len; codepoint >>= 6)
+		buffer[len] = (char)(codepoint & 0x3FULL);
+	buffer[0] |= (char)codepoint;
 }
 
 
@@ -160,6 +192,14 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				input->keypress.key = LIBTERMINPUT_TAB;
 				input->keypress.mods |= LIBTERMINPUT_SHIFT;
 				break;
+			case 'u':
+				if (nums[0] > 0x10FFFFULL) {
+					input->type = LIBTERMINPUT_NONE;
+					break;
+				}
+				encode_utf8(nums[0], input->keypress.symbol);
+				input->keypress.times = 1;
+				break;
 			case '~':
 				input->keypress.times = 1;
 				switch (nums[0]) {
@@ -169,6 +209,13 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				case  4: input->keypress.key = LIBTERMINPUT_END;   break;
 				case  5: input->keypress.key = LIBTERMINPUT_PRIOR; break;
 				case  6: input->keypress.key = LIBTERMINPUT_NEXT;  break;
+				case  7: input->keypress.key = LIBTERMINPUT_HOME;  break;
+				case  8: input->keypress.key = LIBTERMINPUT_END;   break;
+				case  9: input->keypress.key = LIBTERMINPUT_ESC;   break; /* just made this one up */
+				case 11: input->keypress.key = LIBTERMINPUT_F1;    break;
+				case 12: input->keypress.key = LIBTERMINPUT_F2;    break;
+				case 13: input->keypress.key = LIBTERMINPUT_F3;    break;
+				case 14: input->keypress.key = LIBTERMINPUT_F4;    break;
 				case 15: input->keypress.key = LIBTERMINPUT_F5;    break;
 				case 17: input->keypress.key = LIBTERMINPUT_F6;    break;
 				case 18: input->keypress.key = LIBTERMINPUT_F7;    break;
@@ -225,6 +272,10 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 
 	case 'O':
 		switch (!ctx->key[2] ? ctx->key[1] : 0) {
+		case 'A': input->keypress.key = LIBTERMINPUT_UP;           break;
+		case 'B': input->keypress.key = LIBTERMINPUT_DOWN;         break;
+		case 'C': input->keypress.key = LIBTERMINPUT_RIGHT;        break;
+		case 'D': input->keypress.key = LIBTERMINPUT_LEFT;         break;
 		case 'H': input->keypress.key = LIBTERMINPUT_HOME;         break;
 		case 'F': input->keypress.key = LIBTERMINPUT_END;          break;
 		case 'P': input->keypress.key = LIBTERMINPUT_F1;           break;
