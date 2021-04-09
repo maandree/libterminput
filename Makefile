@@ -51,11 +51,14 @@ interactive-test: interactive-test.o libterminput.a
 install: libterminput.a libterminput.$(LIBEXT)
 	mkdir -p -- "$(DESTDIR)$(PREFIX)/lib"
 	mkdir -p -- "$(DESTDIR)$(PREFIX)/include"
+	mkdir -p -- "$(DESTDIR)$(MANPREFIX)/man3"
 	cp -- libterminput.a "$(DESTDIR)$(PREFIX)/lib/"
 	cp -- libterminput.h "$(DESTDIR)$(PREFIX)/include/"
 	cp -- libterminput.$(LIBEXT) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBMINOREXT)"
 	ln -sf -- libterminput.$(LIBMINOREXT) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBMAJOREXT)"
 	ln -sf -- libterminput.$(LIBMAJOREXT) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBEXT)"
+	cp -- libterminput_set_flags.3 "$(DESTDIR)$(MANPREFIX)/man3"
+	ln -sf -- libterminput_set_flags.3 "$(DESTDIR)$(MANPREFIX)/man3/libterminput_clear_flags.3"
 
 uninstall:
 	-rm -f -- "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBMAJOREXT)"
@@ -63,6 +66,8 @@ uninstall:
 	-rm -f -- "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBEXT)"
 	-rm -rf -- "$(DESTDIR)$(PREFIX)/lib/libterminput.a"
 	-rm -rf -- "$(DESTDIR)$(PREFIX)/include/libterminput.h"
+	-rm -rf -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_set_flags.3"
+	-rm -rf -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_clear_flags.3"
 
 clean:
 	-rm -f -- *.o *.a *.lo *.so *.su *.dll *.dylib interactive-test

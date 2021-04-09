@@ -8,7 +8,7 @@
 /**
  * Flags for supporting incompatible input; the user must
  * set or clear his flag after setting or clearing it on
- * the terminal, and the use must make sure that the
+ * the terminal, and the user must make sure that the
  * terminal support this flag if set.
  */
 enum libterminput_flags {
@@ -21,7 +21,7 @@ enum libterminput_flags {
 	/**
 	 * If an ESC is received without anything after it,
 	 * return ESC keypress. This is not always desirable
-	 * behaviour as the use may manually press ESC to
+	 * behaviour as the user may manually press ESC to
 	 * simulate a keypress that terminal does not support
 	 * (yes, this is a real world issue).
 	 */
