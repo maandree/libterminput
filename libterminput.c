@@ -888,3 +888,6 @@ libterminput_clear_flags(struct libterminput_state *ctx, enum libterminput_flags
 	ctx->flags ^= flags;
 	return 0;
 }
+
+
+extern inline int libterminput_is_ready(union libterminput_input *input, struct libterminput_state *ctx);

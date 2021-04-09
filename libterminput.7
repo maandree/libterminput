@@ -13,6 +13,9 @@ libterminput provides the following functions:
 .BR libterminput_read (3)
 Read and parse input from the terminal.
 .TP
+.BR libterminput_is_ready (3)
+Check if there is read data buffered.
+.TP
 .BR libterminput_set_flags (3)
 Add input parsing flags.
 .TP
@@ -20,5 +23,6 @@ Add input parsing flags.
 Remove input parsing flags.
 
 .SH SEE ALSO
+.BR libterminput_is_ready (3),
 .BR libterminput_read (3),
 .BR libterminput_set_flags (3)

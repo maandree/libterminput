@@ -1,0 +1,56 @@
+.TH LIBTERMINPUT_IS_READY 3 LIBTERMINPUT
+.SH NAME
+libterminput_is_ready \- Check if there is read data buffered
+
+.SH SYNOPSIS
+.nf
+#include <libterminput.h>
+
+inline int libterminput_is_ready(union libterminput_input *input, struct libterminput_state *ctx);
+.fi
+.PP
+Link with
+.IR \-lterminput .
+
+.SH DESCRIPTION
+The
+.BR libterminput_is_ready ()
+function check if a call to the
+.BR libterminput_read (3)
+function will skip reading from the file
+descriptor passed to it because it already
+has read data buffered.
+
+.SH RETURN VALUE
+The
+.BR libterminput_is_ready ()
+function return 1 if the next call to the
+.BR libterminput_read (3)
+function will not from file descriptor
+passed to it, and 0 otherwise.
+
+.SH ERRORS
+The
+.BR libterminput_is_ready ()
+function cannot fail.
+
+.SH EXAMPLES
+None.
+
+.SH APPLICATION USAGE
+None.
+
+.SH RATIONALE
+None.
+
+.SH FUTURE DIRECTIONS
+None.
+
+.SH NOTES
+None.
+
+.SH BUGS
+None.
+
+.SH SEE ALSO
+.BR libterminput_read (3)

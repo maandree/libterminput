@@ -183,6 +183,16 @@ struct libterminput_state {
  */
 int libterminput_read(int fd, union libterminput_input *input, struct libterminput_state *ctx);
 
+inline int
+libterminput_is_ready(union libterminput_input *input, struct libterminput_state *ctx)
+{
+	if (!ctx->inited)
+		return 0;
+	if (input->type == LIBTERMINPUT_KEYPRESS && input->keypress.times > 1)
+		return 1;
+	return ctx->stored_head > ctx->stored_tail;
+}
+
 int libterminput_set_flags(struct libterminput_state *ctx, enum libterminput_flags flags);
 int libterminput_clear_flags(struct libterminput_state *ctx, enum libterminput_flags flags);
 

@@ -58,7 +58,7 @@ install: libterminput.a libterminput.$(LIBEXT)
 	cp -- libterminput.$(LIBEXT) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBMINOREXT)"
 	ln -sf -- libterminput.$(LIBMINOREXT) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBMAJOREXT)"
 	ln -sf -- libterminput.$(LIBMAJOREXT) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBEXT)"
-	cp -- libterminput_read.3 libterminput_set_flags.3 "$(DESTDIR)$(MANPREFIX)/man3"
+	cp -- libterminput_read.3 libterminput_set_flags.3 libterminput_is_ready.3 "$(DESTDIR)$(MANPREFIX)/man3"
 	ln -sf -- libterminput_set_flags.3 "$(DESTDIR)$(MANPREFIX)/man3/libterminput_clear_flags.3"
 	cp -- libterminput.7 "$(DESTDIR)$(MANPREFIX)/man7"
 
@@ -71,6 +71,7 @@ uninstall:
 	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_read.3"
 	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_set_flags.3"
 	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_clear_flags.3"
+	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_is_ready.3"
 	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man7/libterminput.7"
 
 clean:
