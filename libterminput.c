@@ -315,7 +315,6 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 		switch (keylen) {
 		case 2:
 			switch (ctx->key[1]) {
-			/* case '@': input->keypress.key = LIBTERMINPUT_INS;   break;  (incompatible with rxvt) */
 			case 'A': input->keypress.key = LIBTERMINPUT_UP;    break;
 			case 'B': input->keypress.key = LIBTERMINPUT_DOWN;  break;
 			case 'C': input->keypress.key = LIBTERMINPUT_RIGHT; break;
@@ -325,7 +324,10 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'G': input->keypress.key = LIBTERMINPUT_BEGIN; break;
 			case 'H': input->keypress.key = LIBTERMINPUT_HOME;  break;
 			case 'M':
-				if (nnums >= 3) { /* Parsing for \e[?1000;1015h output. */
+				if (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M) {
+					input->keypress.key = LIBTERMINPUT_MACRO;
+				} else if (nnums >= 3) {
+					/* Parsing for \e[?1000;1015h output. */
 					nums[0] -= 32ULL;
 				decimal_mouse_tracking_set_press:
 					input->mouseevent.event = LIBTERMINPUT_PRESS;
@@ -388,7 +390,11 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					goto suppress;
 				}
 				break;
-			case 'P': input->keypress.key = LIBTERMINPUT_F1;    break;
+			case 'P':
+				input->keypress.key = LIBTERMINPUT_F1;
+				if (ctx->flags & LIBTERMINPUT_PAUSE_ON_CSI_P)
+					input->keypress.key = LIBTERMINPUT_PAUSE;
+				break;
 			case 'Q': input->keypress.key = LIBTERMINPUT_F2;    break;
 			case 'R': input->keypress.key = LIBTERMINPUT_F3;    break;
 			case 'S': input->keypress.key = LIBTERMINPUT_F4;    break;
@@ -474,6 +480,10 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					goto suppress;
 				goto tilde_case;
 			case '@':
+				if (ctx->flags & LIBTERMINPUT_INS_ON_CSI_AT) {
+					input->keypress.key = LIBTERMINPUT_INS;
+					break;
+				}
 				input->keypress.mods |= LIBTERMINPUT_SHIFT;
 				/* fall through */
 			case '^':
@@ -749,6 +759,8 @@ again:
 		} else if (ctx->key[0] == '[' && ctx->key[1] == '<' && p == &ctx->key[2]) {
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M)) {
+			/* complete */
 		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_DECSET_1005)) {
 			ctx->mouse_tracking = 1;
 			if (ctx->stored_head == ctx->stored_tail) {

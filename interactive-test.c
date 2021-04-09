@@ -22,6 +22,18 @@ main(void)
 		fprintf(stderr, "LIBTERMINPUT_DECSET_1005 set\n");
 		libterminput_set_flags(&ctx, LIBTERMINPUT_DECSET_1005);
 	}
+	if (getenv("TEST_LIBTERMINPUT_MACRO_ON_CSI_M")) {
+		fprintf(stderr, "LIBTERMINPUT_MACRO_ON_CSI_M set\n");
+		libterminput_set_flags(&ctx, LIBTERMINPUT_MACRO_ON_CSI_M);
+	}
+	if (getenv("TEST_LIBTERMINPUT_PAUSE_ON_CSI_P")) {
+		fprintf(stderr, "LIBTERMINPUT_PAUSE_ON_CSI_P set\n");
+		libterminput_set_flags(&ctx, LIBTERMINPUT_PAUSE_ON_CSI_P);
+	}
+	if (getenv("TEST_LIBTERMINPUT_INS_ON_CSI_AT")) {
+		fprintf(stderr, "LIBTERMINPUT_INS_ON_CSI_AT set\n");
+		libterminput_set_flags(&ctx, LIBTERMINPUT_INS_ON_CSI_AT);
+	}
 
 	if (tcgetattr(STDERR_FILENO, &stty)) {
 		perror("tcgetattr STDERR_FILENO");
