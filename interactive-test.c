@@ -42,6 +42,10 @@ main(void)
 		fprintf(stderr, "LIBTERMINPUT_ESC_ON_BLOCK set\n");
 		libterminput_set_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
 	}
+	if (getenv("TEST_LIBTERMINPUT_AWAITING_CURSOR_POSITION")) {
+		fprintf(stderr, "LIBTERMINPUT_AWAITING_CURSOR_POSITION set\n");
+		libterminput_set_flags(&ctx, LIBTERMINPUT_AWAITING_CURSOR_POSITION);
+	}
 
 	if (tcgetattr(STDERR_FILENO, &stty)) {
 		perror("tcgetattr STDERR_FILENO");
@@ -167,6 +171,14 @@ main(void)
 				printf("\033[1;4;4;10;10T");
 				fflush(stdout);
 			}
+		} else if (input.type == LIBTERMINPUT_TERMINAL_IS_OK) {
+			printf("terminal ok\n");
+		} else if (input.type == LIBTERMINPUT_TERMINAL_IS_NOT_OK) {
+			printf("terminal not ok\n");
+		} else if (input.type == LIBTERMINPUT_CURSOR_POSITION) {
+			printf("cursor position:\n");
+			printf("\tx: %zu\n", input.position.x);
+			printf("\ty: %zu\n", input.position.y);
 		} else {
 			printf("other\n");
 		}
