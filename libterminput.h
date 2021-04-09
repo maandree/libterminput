@@ -5,6 +5,16 @@
 #include <stddef.h>
 
 
+/**
+ * Flags for supporting incompatible input; the user must
+ * set or clear his flag after setting or clearing it on
+ * the terminal, and the use must make sure that the
+ * terminal support this flag if set.
+ */
+enum libterminput_flags {
+	LIBTERMINPUT_DECSET_1005 = 0x0001
+};
+
 enum libterminput_mod {
 	LIBTERMINPUT_SHIFT = 0x01,
 	LIBTERMINPUT_META  = 0x02,
@@ -60,12 +70,36 @@ enum libterminput_key {
 	LIBTERMINPUT_KEYPAD_ENTER,
 };
 
+enum libterminput_button {
+	LIBTERMINPUT_NO_BUTTON,
+	LIBTERMINPUT_BUTTON1,      /* left (assuming right-handed) */
+	LIBTERMINPUT_BUTTON2,      /* middle */
+	LIBTERMINPUT_BUTTON3,      /* right (assuming right-handed) */
+	LIBTERMINPUT_SCROLL_UP,    /* no corresponding release event shall be generated */
+	LIBTERMINPUT_SCROLL_DOWN,  /* no corresponding release event shall be generated */
+	LIBTERMINPUT_SCROLL_LEFT,  /* may or may not have a corresponding release event */
+	LIBTERMINPUT_SCROLL_RIGHT, /* may or may not have a corresponding release event */
+	LIBTERMINPUT_XBUTTON1,     /* extended button 1, also known as backward */
+	LIBTERMINPUT_XBUTTON2,     /* extended button 2, also known as forward */
+	LIBTERMINPUT_XBUTTON3,     /* extended button 3, you probably don't have this button */
+	LIBTERMINPUT_XBUTTON4      /* extended button 4, you probably don't have this button */
+};
+
 enum libterminput_type {
 	LIBTERMINPUT_NONE,
 	LIBTERMINPUT_KEYPRESS,
 	LIBTERMINPUT_BRACKETED_PASTE_START,
 	LIBTERMINPUT_BRACKETED_PASTE_END,
-	LIBTERMINPUT_TEXT
+	LIBTERMINPUT_TEXT,
+	LIBTERMINPUT_MOUSEEVENT
+};
+
+enum libterminput_event {
+	LIBTERMINPUT_PRESS,
+	LIBTERMINPUT_RELEASE,
+	LIBTERMINPUT_MOTION,
+	LIBTERMINPUT_HIGHLIGHT_INSIDE,
+	LIBTERMINPUT_HIGHLIGHT_OUTSIDE
 };
 
 struct libterminput_keypress {
@@ -76,6 +110,19 @@ struct libterminput_keypress {
 	char symbol[7];               /* use if .key == LIBTERMINPUT_SYMBOL */
 };
 
+struct libterminput_mouseevent {
+	enum libterminput_type type;
+	enum libterminput_mod mods;      /* Set to 0 for LIBTERMINPUT_HIGHLIGHT_INSIDE and LIBTERMINPUT_HIGHLIGHT_OUTSIDE */
+	enum libterminput_button button; /* Set to 1 for LIBTERMINPUT_HIGHLIGHT_INSIDE and LIBTERMINPUT_HIGHLIGHT_OUTSIDE */
+	enum libterminput_event event;
+	size_t x;
+	size_t y;
+	size_t start_x; /* Only set for LIBTERMINPUT_HIGHLIGHT_OUTSIDE */
+	size_t start_y; /* Only set for LIBTERMINPUT_HIGHLIGHT_OUTSIDE */
+	size_t end_x;   /* Only set for LIBTERMINPUT_HIGHLIGHT_OUTSIDE */
+	size_t end_y;   /* Only set for LIBTERMINPUT_HIGHLIGHT_OUTSIDE */
+};
+
 struct libterminput_text {
 	enum libterminput_type type;
 	size_t nbytes;
@@ -84,8 +131,9 @@ struct libterminput_text {
 
 union libterminput_input {
 	enum libterminput_type type;
-	struct libterminput_keypress keypress; /* use if .type == LIBTERMINPUT_KEYPRESS */
-	struct libterminput_text text;         /* use if .type == LIBTERMINPUT_TEXT */
+	struct libterminput_keypress keypress;     /* use if .type == LIBTERMINPUT_KEYPRESS */
+	struct libterminput_text text;             /* use if .type == LIBTERMINPUT_TEXT */
+	struct libterminput_mouseevent mouseevent; /* use if .type == LIBTERMINPUT_MOUSEEVENT */
 };
 
 
@@ -95,9 +143,11 @@ union libterminput_input {
 struct libterminput_state {
 	int inited; /* whether the input in initialised, not this struct */
 	enum libterminput_mod mods;
+	enum libterminput_flags flags;
 	size_t stored_head;
 	size_t stored_tail;
 	char bracketed_paste;
+	char mouse_tracking;
 	char meta;
 	char n;
 	char npartial;
@@ -116,6 +166,9 @@ struct libterminput_state {
  * @return         1 normally, 0 on end of input, -1 on error
  */
 int libterminput_read(int fd, union libterminput_input *input, struct libterminput_state *ctx);
+
+int libterminput_set_flags(struct libterminput_state *ctx, enum libterminput_flags flags);
+int libterminput_clear_flags(struct libterminput_state *ctx, enum libterminput_flags flags);
 
 
 #endif

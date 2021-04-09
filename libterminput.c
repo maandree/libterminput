@@ -26,9 +26,14 @@ read_input(int fd, struct input *input, struct libterminput_state *ctx)
 		if (ctx->stored_tail == ctx->stored_head)
 			ctx->stored_tail = ctx->stored_head = 0;
 	} else {
-		r = read(fd, &c, 1);
+		r = read(fd, ctx->stored, sizeof(ctx->stored));
 		if (r <= 0)
 			return r;
+		c = ctx->stored[0];
+		if (r > 1) {
+			ctx->stored_tail = 1;
+			ctx->stored_head = (size_t)r;
+		}
 	}
 
 again:
@@ -135,16 +140,152 @@ encode_utf8(unsigned long long int codepoint, char buffer[7])
 }
 
 
+static int
+check_utf8_char(const char *s, size_t *lenp, size_t size)
+{
+	size_t len;
+	*lenp = 0;
+	if (!size) {
+		return 0;
+	} else if ((*s & 0x80) == 0) {
+		*lenp = 1;
+		return 1;
+	} else if ((*s & 0xE0) == 0xC0) {
+		goto need_2;
+	} else if ((*s & 0xF0) == 0xE0) {
+		goto need_3;
+	} else if ((*s & 0xF8) == 0xF0) {
+		goto need_4;
+	} else if ((*s & 0xFC) == 0xF8) {
+		goto need_5;
+	} else if ((*s & 0xFE) == 0xFC) {
+		goto need_6;
+	} else {
+		*lenp = 0;
+		return -1;
+	}
+
+need_6:
+	if (!size--) return 0;
+	if ((s[5] & 0xC0) != 0x80) return -1;
+	++*lenp;
+
+need_5:
+	if (!size--) return 0;
+	if ((s[4] & 0xC0) != 0x80) return -1;
+	++*lenp;
+
+need_4:
+	if (!size--) return 0;
+	if ((s[3] & 0xC0) != 0x80) return -1;
+	++*lenp;
+
+need_3:
+	if (!size--) return 0;
+	if ((s[2] & 0xC0) != 0x80) return -1;
+	++*lenp;
+
+need_2:
+	if (!size--) return 0;
+	if ((s[1] & 0xC0) != 0x80) return -1;
+	++*lenp;
+
+	if (!size--) return 0;
+	++*lenp;
+	return 1;
+}
+
+
+static unsigned long long int
+utf8_decode(const char *s, size_t *ip)
+{
+	unsigned long long int cp = 0;
+	size_t len;
+
+	if ((s[*ip] & 0x80) == 0) {
+		return s[(*ip)++];
+	} else if ((s[*ip] & 0xE0) == 0xC0) {
+		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xC0U);
+		len = 1;
+		goto need_1;
+	} else if ((s[*ip] & 0xF0) == 0xE0) {
+		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xE0U);
+		len = 2;
+		goto need_2;
+	} else if ((s[*ip] & 0xF8) == 0xF0) {
+		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xF0U);
+		len = 3;
+		goto need_3;
+	} else if ((s[*ip] & 0xFC) == 0xF8) {
+		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xF8U);
+		len = 4;
+		goto need_4;
+	} else if ((s[*ip] & 0xFE) == 0xFC) {
+		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xFCU);
+		len = 5;
+		goto need_5;
+	}
+
+need_5:
+	if ((s[*ip] & 0xC0) != 0x80) return 0;
+	cp <<= 6;
+	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
+
+need_4:
+	if ((s[*ip] & 0xC0) != 0x80) return 0;
+	cp <<= 6;
+	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
+
+need_3:
+	if ((s[*ip] & 0xC0) != 0x80) return 0;
+	cp <<= 6;
+	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
+
+need_2:
+	if ((s[*ip] & 0xC0) != 0x80) return 0;
+	cp <<= 6;
+	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
+
+need_1:
+	if ((s[*ip] & 0xC0) != 0x80) return 0;
+	cp <<= 6;
+	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
+
+	/* Let's ignore the 0x10FFFF upper bound. */
+
+	if (cp < 1ULL << (7 + 0 * 6))
+		return len > 1 ? 0ULL : cp;
+	if (cp < 1ULL << (5 + 1 * 6))
+		return len > 1 ? 0ULL : cp;
+	if (cp < 1ULL << (4 + 2 * 6))
+		return len > 1 ? 0ULL : cp;
+	if (cp < 1ULL << (3 + 3 * 6))
+		return len > 1 ? 0ULL : cp;
+	if (cp < 1ULL << (2 + 4 * 6))
+		return len > 1 ? 0ULL : cp;
+	if (cp < 1ULL << (1 + 5 * 6))
+		return len > 1 ? 0ULL : cp;
+
+	return 0;
+}
+
+
 static void
 parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 {
-	unsigned long long int *nums;
-	size_t keylen, n;
+	unsigned long long int *nums, numsbuf[6];
+	size_t keylen, n, nnums = 0, pos;
 	char *p;
 
 	/* Get number of numbers in the sequence, and allocate an array of at least 2 */
-	for (n = 2, p = ctx->key; *p; p++)
-		n += *p == ';';
+	if (ctx->key[0] == '[' && (ctx->key[1] == '<' ? isdigit(ctx->key[2]) : isdigit(ctx->key[1])))
+		nnums += 1;
+	for (n = 2, p = ctx->key; *p; p++) {
+		if (*p == ';') {
+			n += 1;
+			nnums += 1;
+		}
+	}
 	nums = alloca(n * sizeof(*nums));
 	nums[0] = nums[1] = 0;
 
@@ -184,10 +325,103 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'F': input->keypress.key = LIBTERMINPUT_END;   break;
 			case 'G': input->keypress.key = LIBTERMINPUT_BEGIN; break;
 			case 'H': input->keypress.key = LIBTERMINPUT_HOME;  break;
+			case 'M':
+				if (nnums >= 3) { /* Parsing for \e[?1000;1015h output. */
+					nums[0] -= 32ULL;
+				decimal_mouse_tracking_set_press:
+					input->mouseevent.event = LIBTERMINPUT_PRESS;
+				decimal_mouse_tracking:
+					input->mouseevent.type = LIBTERMINPUT_MOUSEEVENT;
+					input->mouseevent.x = (size_t)nums[1] + (size_t)!nums[1];
+					input->mouseevent.y = (size_t)nums[2] + (size_t)!nums[3];
+					input->mouseevent.mods = (enum libterminput_mod)((nums[0] >> 2) & 7ULL);
+					if (nums[0] & 32)
+						input->mouseevent.event = LIBTERMINPUT_MOTION;
+					nums[0] = (nums[0] & 3ULL) | ((nums[0] >> 4) & ~3ULL);
+					if (nums[0] < 4) {
+						nums[0] = (nums[0] + 1) & 3;
+						if (!nums[0] && input->mouseevent.event == LIBTERMINPUT_PRESS)
+							input->mouseevent.event = LIBTERMINPUT_RELEASE;
+					}
+					input->mouseevent.button = (enum libterminput_button)nums[0];
+				} else if (!nnums & !(ctx->flags & LIBTERMINPUT_DECSET_1005)) {
+					/* Parsing output for legacy mouse tracking output. */
+					ctx->mouse_tracking = 0;
+					nums = numsbuf;
+					nums[0] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+					nums[1] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+					nums[2] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+					nums[0] = (nums[0] - 32ULL) & 255ULL;
+					nums[1] = (nums[1] - 32ULL) & 255ULL;
+					nums[2] = (nums[2] - 32ULL) & 255ULL;
+					if (ctx->stored_head == ctx->stored_tail)
+						ctx->stored_head = ctx->stored_tail = 0;
+					goto decimal_mouse_tracking_set_press;
+				} else if (!nnums) {
+					/* Parsing for semi-legacy \e[?1000;1005h output. */
+					ctx->mouse_tracking = 0;
+					nums = numsbuf;
+					pos = ctx->stored_tail;
+					nums[0] = utf8_decode(ctx->stored, &ctx->stored_tail);
+					if (nums[0] <= 32) {
+						ctx->stored_tail = pos;
+						goto suppress;
+					}
+					pos = ctx->stored_tail;
+					nums[1] = utf8_decode(ctx->stored, &ctx->stored_tail);
+					if (nums[1] <= 32) {
+						ctx->stored_tail = pos;
+						goto suppress;
+					}
+					pos = ctx->stored_tail;
+					nums[2] = utf8_decode(ctx->stored, &ctx->stored_tail);
+					if (nums[2] <= 32) {
+						ctx->stored_tail = pos;
+						goto suppress;
+					}
+					nums[0] = nums[0] - 32ULL;
+					nums[1] = nums[1] - 32ULL;
+					nums[2] = nums[2] - 32ULL;
+					if (ctx->stored_head == ctx->stored_tail)
+						ctx->stored_head = ctx->stored_tail = 0;
+					goto decimal_mouse_tracking_set_press;
+				} else {
+					goto suppress;
+				}
+				break;
 			case 'P': input->keypress.key = LIBTERMINPUT_F1;    break;
 			case 'Q': input->keypress.key = LIBTERMINPUT_F2;    break;
 			case 'R': input->keypress.key = LIBTERMINPUT_F3;    break;
 			case 'S': input->keypress.key = LIBTERMINPUT_F4;    break;
+			case 'T':
+				/* Parsing output for legacy mouse highlight tracking output. (\e[?1001h) */
+				ctx->mouse_tracking = 0;
+				nums = numsbuf;
+				nums[0] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+				nums[1] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+				nums[2] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+				nums[3] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+				nums[4] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+				nums[5] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+				nums[0] = (nums[0] - 32ULL) & 255ULL;
+				nums[1] = (nums[1] - 32ULL) & 255ULL;
+				nums[2] = (nums[2] - 32ULL) & 255ULL;
+				nums[3] = (nums[3] - 32ULL) & 255ULL;
+				nums[4] = (nums[4] - 32ULL) & 255ULL;
+				nums[5] = (nums[5] - 32ULL) & 255ULL;
+				if (ctx->stored_head == ctx->stored_tail)
+					ctx->stored_head = ctx->stored_tail = 0;
+				input->mouseevent.type = LIBTERMINPUT_MOUSEEVENT;
+				input->mouseevent.event = LIBTERMINPUT_HIGHLIGHT_OUTSIDE;
+				input->mouseevent.mods = 0;
+				input->mouseevent.button = LIBTERMINPUT_BUTTON1;
+				input->mouseevent.start_x = (size_t)nums[0];
+				input->mouseevent.start_y = (size_t)nums[1];
+				input->mouseevent.end_x = (size_t)nums[2];
+				input->mouseevent.end_y = (size_t)nums[3];
+				input->mouseevent.x = (size_t)nums[4];
+				input->mouseevent.y = (size_t)nums[5];
+				break;
 			case 'U': input->keypress.key = LIBTERMINPUT_NEXT;  break;
 			case 'V': input->keypress.key = LIBTERMINPUT_PRIOR; break;
 			case 'Z':
@@ -209,6 +443,23 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'd':
 				input->keypress.key = LIBTERMINPUT_LEFT;
 				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				break;
+			case 't':
+				/* Parsing output for legacy mouse highlight tracking output (\e[?1001h). */
+				ctx->mouse_tracking = 0;
+				nums = numsbuf;
+				nums[0] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+				nums[1] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+				nums[0] = (nums[0] - 32ULL) & 255ULL;
+				nums[1] = (nums[1] - 32ULL) & 255ULL;
+				if (ctx->stored_head == ctx->stored_tail)
+					ctx->stored_head = ctx->stored_tail = 0;
+				input->mouseevent.type = LIBTERMINPUT_MOUSEEVENT;
+				input->mouseevent.event = LIBTERMINPUT_HIGHLIGHT_INSIDE;
+				input->mouseevent.mods = 0;
+				input->mouseevent.button = LIBTERMINPUT_BUTTON1;
+				input->mouseevent.x = (size_t)nums[0];
+				input->mouseevent.y = (size_t)nums[1];
 				break;
 			case 'u':
 				if (nums[0] > 0x10FFFFULL) {
@@ -290,7 +541,15 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'D': input->keypress.key = LIBTERMINPUT_F4; break;
 			case 'E': input->keypress.key = LIBTERMINPUT_F5; break;
 			default:
-				goto suppress;
+				if (ctx->key[1] == '<' && (ctx->key[2] == 'M' || ctx->key[2] == 'm') && nnums >= 3) {
+					/* Parsing for \e[?1003;1006h output. */
+					input->mouseevent.event = LIBTERMINPUT_PRESS;
+					if (ctx->key[2] == 'm')
+						input->mouseevent.event = LIBTERMINPUT_RELEASE;
+					goto decimal_mouse_tracking;
+				} else {
+					goto suppress;
+				}
 			}
 			break;
 		default:
@@ -410,6 +669,7 @@ libterminput_read(int fd, union libterminput_input *input, struct libterminput_s
 	size_t n, m;
 	char *p;
 	int r;
+	ssize_t rd;
 
 	if (!ctx->inited) {
 		ctx->inited = 1;
@@ -421,10 +681,35 @@ libterminput_read(int fd, union libterminput_input *input, struct libterminput_s
 
 	if (ctx->bracketed_paste)
 		return read_bracketed_paste(fd, input, ctx);
-
-	r = read_input(fd, &ret, ctx);
-	if (r <= 0)
-		return r;
+	if (!ctx->mouse_tracking) {
+		r = read_input(fd, &ret, ctx);
+		if (r <= 0)
+			return r;
+	} else if (ctx->mouse_tracking == 1) {
+		if (ctx->stored_tail == sizeof(ctx->stored)) {
+			memmove(ctx->stored, &ctx->stored[ctx->stored_tail], ctx->stored_head - ctx->stored_tail);
+			ctx->stored_tail -= ctx->stored_head;
+			ctx->stored_head = 0;
+		}
+		rd = read(fd, &ctx->stored[ctx->stored_head], 1);
+		if (rd <= 0)
+			return (int)rd;
+		ctx->stored_head += 1;
+		p = strchr(ctx->key, '\0');
+		goto continue_incomplete;
+	} else {
+		if (ctx->stored_tail > sizeof(ctx->stored) - (size_t)ctx->mouse_tracking) {
+			memmove(ctx->stored, &ctx->stored[ctx->stored_tail], ctx->stored_head - ctx->stored_tail);
+			ctx->stored_tail -= ctx->stored_head;
+			ctx->stored_head = 0;
+		}
+		rd = read(fd, &ctx->stored[ctx->stored_head], (size_t)ctx->mouse_tracking - (ctx->stored_head - ctx->stored_tail));
+		if (rd <= 0)
+			return (int)rd;
+		ctx->stored_head += (size_t)rd;
+		p = strchr(ctx->key, '\0');
+		goto continue_incomplete;
+	}
 
 again:
 	if (!*ret.symbol) {
@@ -458,7 +743,63 @@ again:
 		}
 		p = stpcpy(&ctx->key[n], ret.symbol);
 		/* Check if sequence is complete */
+	continue_incomplete:
 		if (!isalpha(p[-1]) && p[-1] != '~') {
+			input->type = LIBTERMINPUT_NONE;
+			return 1;
+		} else if (ctx->key[0] == '[' && ctx->key[1] == '<' && p == &ctx->key[2]) {
+			input->type = LIBTERMINPUT_NONE;
+			return 1;
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_DECSET_1005)) {
+			ctx->mouse_tracking = 1;
+			if (ctx->stored_head == ctx->stored_tail) {
+				input->type = LIBTERMINPUT_NONE;
+				return 1;
+			}
+			n = 0;
+			r = check_utf8_char(&ctx->stored[ctx->stored_tail + n], &m, ctx->stored_head - (ctx->stored_tail + n));
+			n += m;
+			if (!r) {
+				input->type = LIBTERMINPUT_NONE;
+				return 1;
+			} else if (r < 0) {
+				ctx->mouse_tracking = 0;
+				input->type = LIBTERMINPUT_NONE;
+				ctx->stored_tail + n;
+				return 1;
+			}
+			r = check_utf8_char(&ctx->stored[ctx->stored_tail + n], &m, ctx->stored_head - (ctx->stored_tail + n));
+			n += m;
+			if (!r) {
+				input->type = LIBTERMINPUT_NONE;
+				return 1;
+			} else if (r < 0) {
+				ctx->mouse_tracking = 0;
+				input->type = LIBTERMINPUT_NONE;
+				ctx->stored_tail + n;
+				return 1;
+			}
+			r = check_utf8_char(&ctx->stored[ctx->stored_tail + n], &m, ctx->stored_head - (ctx->stored_tail + n));
+			n += m;
+			if (!r) {
+				input->type = LIBTERMINPUT_NONE;
+				return 1;
+			} else if (r < 0) {
+				ctx->mouse_tracking = 0;
+				input->type = LIBTERMINPUT_NONE;
+				ctx->stored_tail + n;
+				return 1;
+			}
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && ctx->stored_head - ctx->stored_tail < 3) {
+			ctx->mouse_tracking = 3;
+			input->type = LIBTERMINPUT_NONE;
+			return 1;
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 't' && ctx->stored_head - ctx->stored_tail < 2) {
+			ctx->mouse_tracking = 2;
+			input->type = LIBTERMINPUT_NONE;
+			return 1;
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'T' && ctx->stored_head - ctx->stored_tail < 6) {
+			ctx->mouse_tracking = 6;
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
 		}
@@ -503,4 +844,21 @@ again:
 	}
 
 	return 1;
+}
+
+
+int
+libterminput_set_flags(struct libterminput_state *ctx, enum libterminput_flags flags)
+{
+	ctx->flags |= flags;
+	return 0;
+}
+
+
+int
+libterminput_clear_flags(struct libterminput_state *ctx, enum libterminput_flags flags)
+{
+	ctx->flags |= flags;
+	ctx->flags ^= flags;
+	return 0;
 }

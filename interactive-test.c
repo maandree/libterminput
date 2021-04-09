@@ -1,5 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
@@ -17,14 +18,19 @@ main(void)
 
 	memset(&ctx, 0, sizeof(ctx));
 
-	if (tcgetattr(STDIN_FILENO, &stty)) {
-		perror("tcgetattr STDIN_FILENO");
+	if (getenv("TEST_LIBTERMINPUT_DECSET_1005")) {
+		fprintf(stderr, "LIBTERMINPUT_DECSET_1005 set\n");
+		libterminput_set_flags(&ctx, LIBTERMINPUT_DECSET_1005);
+	}
+
+	if (tcgetattr(STDERR_FILENO, &stty)) {
+		perror("tcgetattr STDERR_FILENO");
 		return 1;
 	}
 	saved_stty = stty;
 	stty.c_lflag &= (tcflag_t)~(ECHO | ICANON);
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &stty)) {
-		perror("tcsetattr STDIN_FILENO TCSAFLUSH");
+	if (tcsetattr(STDERR_FILENO, TCSAFLUSH, &stty)) {
+		perror("tcsetattr STDERR_FILENO TCSAFLUSH");
 		return 1;
 	}
 
@@ -97,6 +103,48 @@ main(void)
 			printf("text:\n");
 			printf("\tlength: %zu\n", input.text.nbytes);
 			printf("\tdata: %.512s\n", input.text.bytes);
+		} else if (input.type == LIBTERMINPUT_MOUSEEVENT) {
+			printf("mouseevent:\n");
+			switch (input.mouseevent.event) {
+			case LIBTERMINPUT_PRESS:             printf("\t%s: %s\n", "event", "press");             break;
+			case LIBTERMINPUT_RELEASE:           printf("\t%s: %s\n", "event", "release");           break;
+			case LIBTERMINPUT_MOTION:            printf("\t%s: %s\n", "event", "motion");            break;
+			case LIBTERMINPUT_HIGHLIGHT_INSIDE:  printf("\t%s: %s\n", "event", "highlight inside");  goto was_highlight;
+			case LIBTERMINPUT_HIGHLIGHT_OUTSIDE: printf("\t%s: %s\n", "event", "highlight outside"); goto was_highlight;
+			default:
+				printf("\t%s: %s\n", "event", "other");
+				break;
+			}
+			switch (input.mouseevent.button) {
+			case LIBTERMINPUT_NO_BUTTON:    printf("\t%s: %s\n", "button", "none");                             break;
+			case LIBTERMINPUT_BUTTON1:      printf("\t%s: %s\n", "button", "button 1 (left)");                  break;
+			case LIBTERMINPUT_BUTTON2:      printf("\t%s: %s\n", "button", "button 2 (middle)");                break;
+			case LIBTERMINPUT_BUTTON3:      printf("\t%s: %s\n", "button", "button 3 (right)");                 break;
+			case LIBTERMINPUT_SCROLL_UP:    printf("\t%s: %s\n", "button", "scroll up");                        break;
+			case LIBTERMINPUT_SCROLL_DOWN:  printf("\t%s: %s\n", "button", "scroll down");                      break;
+			case LIBTERMINPUT_SCROLL_LEFT:  printf("\t%s: %s\n", "button", "scroll left");                      break;
+			case LIBTERMINPUT_SCROLL_RIGHT: printf("\t%s: %s\n", "button", "scroll right");                     break;
+			case LIBTERMINPUT_XBUTTON1:     printf("\t%s: %s\n", "button", "extended button 1 (X1; backward)"); break;
+			case LIBTERMINPUT_XBUTTON2:     printf("\t%s: %s\n", "button", "extended button 2 (X2; forward)");  break;
+			case LIBTERMINPUT_XBUTTON3:     printf("\t%s: %s\n", "button", "extended button 3 (X3)");           break;
+			case LIBTERMINPUT_XBUTTON4:     printf("\t%s: %s\n", "button", "extended button 4 (X4)");           break;
+			default:
+				printf("\t%s: %s\n", "button", "other");
+				break;
+			}
+			printf("\t%s: %s\n", "shift", (input.mouseevent.mods & LIBTERMINPUT_SHIFT) ? "yes" : "no");
+			printf("\t%s: %s\n", "meta",  (input.mouseevent.mods & LIBTERMINPUT_META)  ? "yes" : "no");
+			printf("\t%s: %s\n", "ctrl",  (input.mouseevent.mods & LIBTERMINPUT_CTRL)  ? "yes" : "no");
+		was_highlight:
+			printf("\t%s: x=%zu, y=%zu\n", "position", input.mouseevent.x, input.mouseevent.y);
+			if (LIBTERMINPUT_HIGHLIGHT_OUTSIDE) {
+				printf("\t%s: x=%zu, y=%zu\n", "start", input.mouseevent.start_x, input.mouseevent.start_y);
+				printf("\t%s: x=%zu, y=%zu\n", "end",   input.mouseevent.end_x,   input.mouseevent.end_y);
+			}
+			if (input.mouseevent.event == LIBTERMINPUT_PRESS) {
+				printf("\033[1;4;4;10;10T");
+				fflush(stdout);
+			}
 		} else {
 			printf("other\n");
 		}
@@ -105,6 +153,6 @@ main(void)
 	if (r < 0)
 		perror("libterminput_read STDIN_FILENO");
 
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_stty);
+	tcsetattr(STDERR_FILENO, TCSAFLUSH, &saved_stty);
 	return -r;
 }
