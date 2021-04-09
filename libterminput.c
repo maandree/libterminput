@@ -18,7 +18,7 @@ static int
 read_input(int fd, struct input *input, struct libterminput_state *ctx)
 {
 	unsigned char c, tc;
-	int r;
+	ssize_t r;
 
 	/* Get next byte from input */
 	if (ctx->stored_head != ctx->stored_tail) {
@@ -28,8 +28,8 @@ read_input(int fd, struct input *input, struct libterminput_state *ctx)
 	} else {
 		r = read(fd, ctx->stored, sizeof(ctx->stored));
 		if (r <= 0)
-			return r;
-		c = ctx->stored[0];
+			return (int)r;
+		c = (unsigned char)ctx->stored[0];
 		if (r > 1) {
 			ctx->stored_tail = 1;
 			ctx->stored_head = (size_t)r;
@@ -42,18 +42,18 @@ again:
 		if ((c & 0xC0) != 0x80) {
 			/* Short multibyte-character: return short and store read byte from next input */
 			input->mods = ctx->mods;
-			ctx->partial[ctx->npartial] = '\0';
+			ctx->partial[(unsigned char)ctx->npartial] = '\0';
 			ctx->n = 0;
 			ctx->npartial = 0;
 			ctx->mods = 0;
-			ctx->stored[ctx->stored_head++] = c;
+			ctx->stored[ctx->stored_head++] = (char)c;
 			strcpy(input->symbol, ctx->partial);
 			return 1;
 		} else {
 			/* Store byte, and if done, return */
-			ctx->partial[ctx->npartial++] = c;
+			ctx->partial[(unsigned char)ctx->npartial++] = (char)c;
 			if (ctx->npartial == ctx->n) {
-				ctx->partial[ctx->npartial] = '\0';
+				ctx->partial[(unsigned char)ctx->npartial] = '\0';
 				input->mods = ctx->mods;
 				ctx->npartial = 0;
 				ctx->mods = 0;
@@ -86,13 +86,13 @@ again:
 			ctx->n++;
 		if (ctx->n > 6) {
 			/* If overlong, return first byte a single-byte-character */
-			input->symbol[0] = c;
+			input->symbol[0] = (char)c;
 			input->symbol[1] = '\0';
 			input->mods = ctx->mods;
 			ctx->mods = 0;
 			return 1;
 		}
-		ctx->partial[0] = c;
+		ctx->partial[0] = (char)c;
 		ctx->npartial = 1;
 	} else if (c & 0x80) {
 		/* 8th bit set to signify META */
@@ -104,7 +104,7 @@ again:
 	} else {
 	single_byte:
 		/* Single-byte-character */
-		input->symbol[0] = c;
+		input->symbol[0] = (char)c;
 		input->symbol[1] = '\0';
 		input->mods = ctx->mods;
 		ctx->mods = 0;
@@ -120,7 +120,7 @@ again:
 static void
 encode_utf8(unsigned long long int codepoint, char buffer[7])
 {
-	static const char masks[6] = {0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC};
+	static const char masks[6] = {(char)0x00, (char)0xC0, (char)0xE0, (char)0xF0, (char)0xF8, (char)0xFC};
 	static const unsigned long long int limits[6] = {
 		1ULL << (7 + 0 * 6),
 		1ULL << (5 + 1 * 6),
@@ -143,7 +143,6 @@ encode_utf8(unsigned long long int codepoint, char buffer[7])
 static int
 check_utf8_char(const char *s, size_t *lenp, size_t size)
 {
-	size_t len;
 	*lenp = 0;
 	if (!size) {
 		return 0;
@@ -203,7 +202,7 @@ utf8_decode(const char *s, size_t *ip)
 	size_t len;
 
 	if ((s[*ip] & 0x80) == 0) {
-		return s[(*ip)++];
+		return (unsigned long long int)s[(*ip)++];
 	} else if ((s[*ip] & 0xE0) == 0xC0) {
 		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xC0U);
 		len = 1;
@@ -765,7 +764,7 @@ again:
 			} else if (r < 0) {
 				ctx->mouse_tracking = 0;
 				input->type = LIBTERMINPUT_NONE;
-				ctx->stored_tail + n;
+				ctx->stored_tail += n;
 				return 1;
 			}
 			r = check_utf8_char(&ctx->stored[ctx->stored_tail + n], &m, ctx->stored_head - (ctx->stored_tail + n));
@@ -776,7 +775,7 @@ again:
 			} else if (r < 0) {
 				ctx->mouse_tracking = 0;
 				input->type = LIBTERMINPUT_NONE;
-				ctx->stored_tail + n;
+				ctx->stored_tail += n;
 				return 1;
 			}
 			r = check_utf8_char(&ctx->stored[ctx->stored_tail + n], &m, ctx->stored_head - (ctx->stored_tail + n));
@@ -787,7 +786,7 @@ again:
 			} else if (r < 0) {
 				ctx->mouse_tracking = 0;
 				input->type = LIBTERMINPUT_NONE;
-				ctx->stored_tail + n;
+				ctx->stored_tail += n;
 				return 1;
 			}
 		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && ctx->stored_head - ctx->stored_tail < 3) {
@@ -811,7 +810,7 @@ again:
 	} else if (ctx->meta && (!strcmp(ret.symbol, "[") || !strcmp(ret.symbol, "O"))) {
 		/* ESC [ or ESC 0 is used as the beginning of most special keys */
 		strcpy(ctx->key, ret.symbol);
-		input->type == LIBTERMINPUT_NONE;
+		input->type = LIBTERMINPUT_NONE;
 	} else {
 		/* Character input and single-byte special keys */
 		input->type = LIBTERMINPUT_KEYPRESS;

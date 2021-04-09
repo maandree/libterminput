@@ -46,6 +46,7 @@ main(void)
 			case LIBTERMINPUT_UP:              printf("\t%s: %s\n", "key", "up");              break;
 			case LIBTERMINPUT_DOWN:            printf("\t%s: %s\n", "key", "down");            break;
 			case LIBTERMINPUT_RIGHT:           printf("\t%s: %s\n", "key", "right");           break;
+			case LIBTERMINPUT_LEFT:            printf("\t%s: %s\n", "key", "left");            break;
 			case LIBTERMINPUT_BEGIN:           printf("\t%s: %s\n", "key", "begin");           break;
 			case LIBTERMINPUT_TAB:             printf("\t%s: %s\n", "key", "tab");             break;
 			case LIBTERMINPUT_F1:              printf("\t%s: %s\n", "key", "f1");              break;
