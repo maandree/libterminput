@@ -1,0 +1,436 @@
+.TH LIBTERMINPUT_READ 3 LIBTERMINPUT
+.SH NAME
+libterminput_read \- Read input from the terminal
+
+.SH SYNOPSIS
+.nf
+#include <libterminput.h>
+
+enum libterminput_mod {
+	LIBTERMINPUT_SHIFT = 0x01,
+	LIBTERMINPUT_META  = 0x02,
+	LIBTERMINPUT_CTRL  = 0x04
+};
+
+enum libterminput_key {
+	LIBTERMINPUT_SYMBOL,
+	LIBTERMINPUT_UP,
+	LIBTERMINPUT_DOWN,
+	LIBTERMINPUT_RIGHT,
+	LIBTERMINPUT_LEFT,
+	LIBTERMINPUT_BEGIN, /* keypad 5 without numlock */
+	LIBTERMINPUT_TAB,
+	LIBTERMINPUT_BACKTAB,
+	LIBTERMINPUT_F1,
+	LIBTERMINPUT_F2,
+	LIBTERMINPUT_F3,
+	LIBTERMINPUT_F4,
+	LIBTERMINPUT_F5,
+	LIBTERMINPUT_F6,
+	LIBTERMINPUT_F7,
+	LIBTERMINPUT_F8,
+	LIBTERMINPUT_F9,
+	LIBTERMINPUT_F10,
+	LIBTERMINPUT_F11,
+	LIBTERMINPUT_F12,
+	LIBTERMINPUT_HOME,  /* = find    */
+	LIBTERMINPUT_INS,
+	LIBTERMINPUT_DEL,   /* = remove  */
+	LIBTERMINPUT_END,   /* = select  */
+	LIBTERMINPUT_PRIOR, /* page up   */
+	LIBTERMINPUT_NEXT,  /* page down */
+	LIBTERMINPUT_ERASE, /* backspace */
+	LIBTERMINPUT_ENTER, /* return    */
+	LIBTERMINPUT_ESC,
+	LIBTERMINPUT_MACRO,
+	LIBTERMINPUT_PAUSE,
+	LIBTERMINPUT_KEYPAD_0,
+	LIBTERMINPUT_KEYPAD_1,
+	LIBTERMINPUT_KEYPAD_2,
+	LIBTERMINPUT_KEYPAD_3,
+	LIBTERMINPUT_KEYPAD_4,
+	LIBTERMINPUT_KEYPAD_5,
+	LIBTERMINPUT_KEYPAD_6,
+	LIBTERMINPUT_KEYPAD_7,
+	LIBTERMINPUT_KEYPAD_8,
+	LIBTERMINPUT_KEYPAD_9,
+	LIBTERMINPUT_KEYPAD_PLUS,
+	LIBTERMINPUT_KEYPAD_MINUS,
+	LIBTERMINPUT_KEYPAD_TIMES,
+	LIBTERMINPUT_KEYPAD_DIVISION,
+	LIBTERMINPUT_KEYPAD_DECIMAL,
+	LIBTERMINPUT_KEYPAD_COMMA,
+	LIBTERMINPUT_KEYPAD_POINT,
+	LIBTERMINPUT_KEYPAD_ENTER,
+};
+
+enum libterminput_button {
+	LIBTERMINPUT_NO_BUTTON,
+	LIBTERMINPUT_BUTTON1,
+	LIBTERMINPUT_BUTTON2,
+	LIBTERMINPUT_BUTTON3,
+	LIBTERMINPUT_SCROLL_UP,
+	LIBTERMINPUT_SCROLL_DOWN,
+	LIBTERMINPUT_SCROLL_LEFT,
+	LIBTERMINPUT_SCROLL_RIGHT,
+	LIBTERMINPUT_XBUTTON1,
+	LIBTERMINPUT_XBUTTON2,
+	LIBTERMINPUT_XBUTTON3,
+	LIBTERMINPUT_XBUTTON4
+};
+
+enum libterminput_type {
+	LIBTERMINPUT_NONE,
+	LIBTERMINPUT_KEYPRESS,
+	LIBTERMINPUT_BRACKETED_PASTE_START,
+	LIBTERMINPUT_BRACKETED_PASTE_END,
+	LIBTERMINPUT_TEXT,
+	LIBTERMINPUT_MOUSEEVENT
+};
+
+enum libterminput_event {
+	LIBTERMINPUT_PRESS,
+	LIBTERMINPUT_RELEASE,
+	LIBTERMINPUT_MOTION,
+	LIBTERMINPUT_HIGHLIGHT_INSIDE,
+	LIBTERMINPUT_HIGHLIGHT_OUTSIDE
+};
+
+struct libterminput_keypress {
+	enum libterminput_type type;
+	enum libterminput_key  key;
+	unsigned long long int times;
+	enum libterminput_mod  mods;
+	char                   symbol[7];
+};
+
+struct libterminput_mouseevent {
+	enum libterminput_type   type;
+	enum libterminput_mod    mods;
+	enum libterminput_button button;
+	enum libterminput_event  event;
+	size_t                   x;
+	size_t                   y;
+	size_t                   start_x;
+	size_t                   start_y;
+	size_t                   end_x;
+	size_t                   end_y;
+};
+
+struct libterminput_text {
+	enum libterminput_type type;
+	size_t                 nbytes;
+	char                   bytes[512];
+};
+
+union libterminput_input {
+	enum libterminput_type         type;
+	struct libterminput_keypress   keypress;
+	struct libterminput_text       text;
+	struct libterminput_mouseevent mouseevent;
+};
+
+int libterminput_read(int \fIfd\fP, union libterminput_input *\fIinput\fP, struct libterminput_state *\fIctx\fP);
+.fi
+.PP
+Link with
+.IR \-lterminput .
+
+.SH DESCRIPTION
+The
+.BR libterminput_read ()
+reads input from the file descriptor specified in the
+.I fd
+parameter, parses it as input from the terminal, and
+returns the result in the
+.IR *input .
+.PP
+.I ctx
+must have been zero-initialised, e.g. with
+.BR memset (3)
+function.
+.PP
+.I input
+shall be the same pointer every time the
+.BR libterminput_read ()
+function is called with the same
+.I ctx ,
+as should
+.IR fd ,
+except the user may choose to use a negative
+file descriptor (expect
+.I EBADF
+exception) to read the last data that has
+been buffered.
+.PP
+If the
+.BR libterminput_read ()
+function returns 1, there was input;
+.I input->type
+is used to detech which type of input was parsed.
+Currently possible values are:
+.TP
+.B LIBTERMINPUT_NONE
+A special value to mark that the input was either
+discard or not yet completed. The function only
+reads at most once so input may be complete (input
+can also be bufferd, in which case it will not
+read at all).
+.TP
+.B LIBTERMINPUT_KEYPRESS
+Normal key press. The pressed key will be stored in
+.I input->key
+and has a value from
+.IR "enum libterminput_key" ;
+these values are listed above and have fairly self
+explanatory names; however there are three special
+values to take note of:
+.RS 7
+.TP
+.B LIBTERMINPUT_SYMBOL
+The key press generated text (or a paste was made
+without bracketed paste enabled), which is stored
+in
+.I input->keypress.symbol
+as a NUL-terminated string. For key presses (and
+pastes) that generate multiple character-text, one
+event will be generated per character.
+.TP
+.B LIBTERMINPUT_TAB
+.TQ
+.B LIBTERMINPUT_BACKTAB
+Backtab will be reported as shift+tab unless the
+.B LIBTERMINPUT_SEPARATE_BACKTAB
+flag has been set with the
+.BR libterminput_set_flags (3)
+function.
+.PP
+The modifiers are stored, as a bitwise OR of
+modifiers, in
+.IR input->keypress.mods .
+Recognised modifiers are
+.BR LIBTERMINPUT_SHIFT ,
+.BR LIBTERMINPUT_META ,
+and
+.BR LIBTERMINPUT_CTRL ,
+however, if the terminal support other modifiers,
+they may also appear in
+.IR input->keypress.mods .
+.B NB!
+.IR input->keypress.mods
+may be non-zero even if
+.I input->key
+is
+.BR LIBTERMINPUT_SYMBOL .
+This can happen for example if meta or control was
+held down. It is even possible that
+.B LIBTERMINPUT_SHIFT
+is set, however this is unlikely, and exceptionally
+unlikely for any other symbol than the space character.
+Information about shift if normally not sent for
+normal text keys as shift is used to select which
+character on the key generate.
+
+Some events, namely scrolling with the mouse, may
+generate an event which as marked as repeated. This
+information is stored in
+.I input->keypress.times
+and may be ignored and is usually 1, But the application
+may choose to inspect this value, in doing so, it shall
+ignore the next
+.I input->keypress.times-1
+events.
+.RE
+.TP
+.B LIBTERMINPUT_BRACKETED_PASTE_START
+Marks the beginning of a bracketed paste.
+The application does not need to do anything,
+but may choose to defer processing of the
+pasted text until the end has been reached.
+.TP
+.B LIBTERMINPUT_BRACKETED_PASTE_END
+Marks the beginning of a bracketed paste.
+.TP
+.B LIBTERMINPUT_TEXT
+The input is text that has been pasted.
+The paste may be incomplete.
+.B LIBTERMINPUT_BRACKETED_PASTE_END
+marks the end of the paste; however even so, a
+terminal may choose to break up a paste in order
+to deal with pasted escape characters, in particalur
+where it looks like the escape esquence that is
+used to mark the end of a bracketed paste. The
+application shall treat pasted escape characters
+as any other character.
+
+The pasted text will be stored in
+.IR input->text.bytes .
+Be aware that this is not a NUL-terminated string,
+rather, it's length is stored in
+.IR input->text.nbytes .
+.TP
+.B LIBTERMINPUT_MOUSEEVENT
+Mouse tracking input. The location of the mouse
+is stored in
+.I input->mouseevent.x
+and
+.I input->mouseevent.y
+(normally this would indicate the character cell
+and the cell in top left corner would have the
+value 1 for both fields).
+
+The button that has been pressed or released is
+stored in
+.I input->mouseevent.button
+and the for a mouse motion event one of the held
+done buttons (it is arbitrary which) will be stored
+in this field, if any. Possible values are:
+.RS 7
+.TP
+.B LIBTERMINPUT_NO_BUTTON
+This will be used for a mouse motion event where
+the mouse button is held down.
+.TP
+.B LIBTERMINPUT_BUTTON1
+The left mouse button for a right-handed setup or
+the right mouse button for a left-handed setup;
+that is, it is the primary mouse button.
+.TP
+.B LIBTERMINPUT_BUTTON2
+The middle mouse button, which is usually a scroll wheel.
+.TP
+.B LIBTERMINPUT_BUTTON3
+The right mouse button for a right-handed setup or
+the left mouse button for a left-handed setup;
+that is, it is the secondary mouse button.
+.TP
+.B LIBTERMINPUT_SCROLL_UP
+The user scrolled up with the mouse; this is reported
+as a mouse press event even if it is actually a scroll
+event. The terminal shall not send a corresponding
+release event.
+.TP
+.B LIBTERMINPUT_SCROLL_DOWN
+The user scrolled down with the mouse; this is reported
+as a mouse press event even if it is actually a scroll
+event. The terminal shall not send a corresponding
+release event.
+.TP
+.B LIBTERMINPUT_SCROLL_LEFT
+The user scrolled leftwards with the mouse. The developer
+is not aware of any standisation of whether this shall
+behandled by the terminal in the same manner as a scroll
+up/down even, or as a normal mouse button press/release event;
+however for trackpads would be unable to detect a release
+event, so it will probably be handled as a scroll event.
+.TP
+.B LIBTERMINPUT_SCROLL_RIGHT
+The user scrolled rightwards with the mouse. The developer
+is not aware of any standisation of whether this shall
+behandled by the terminal in the same manner as a scroll
+up/down even, or as a normal mouse button press/release event;
+however for trackpads would be unable to detect a release
+event, so it will probably be handled as a scroll event.
+.TP
+.B LIBTERMINPUT_XBUTTON1
+The first extended button (X1), usually used to go backwards.
+.TP
+.B LIBTERMINPUT_XBUTTON2
+The second extended button (X2), usually used to go forwards.
+.TP
+.B LIBTERMINPUT_XBUTTON3
+The third extended button (X3). You probably don't have this one.
+.TP
+.B LIBTERMINPUT_XBUTTON4
+The fourth extended button (X4). You probably don't have this one.
+.RE
+
+The held down modifiers will be stored a bitwise
+OR of modifiers in
+.IR input->mouseevent.mods .
+The modifiers than currently can appear are
+.BR LIBTERMINPUT_SHIFT ,
+.BR LIBTERMINPUT_META ,
+and
+.BR LIBTERMINPUT_CTRL .
+
+What type of mouse action has occurred is stored in
+.IR input->mouseevent.event ;
+possible values are:
+.RS 7
+.TP
+.B LIBTERMINPUT_PRESS
+A mouse button was pressed.
+.TP
+.B LIBTERMINPUT_RELEASE
+A mouse button was released.
+.TP
+.B LIBTERMINPUT_MOTION
+The mouse moved.
+.TP
+.B LIBTERMINPUT_HIGHLIGHT_INSIDE
+Highlight ended inside of selected region.
+.I input->mouseevent.mods
+and
+.I input->mouseevent.button
+will be set to 0 and 1, but should be ignored
+as this information will not be sent by the terminal.
+.TP
+.B LIBTERMINPUT_HIGHLIGHT_OUTSIDE
+Highlight ended outside of selected region.
+.I input->mouseevent.mods
+and
+.I input->mouseevent.button
+will be set to 0 and 1, but should be ignored
+as this information will not be sent by the terminal.
+
+For this event,
+.IR input->mouseevent.start_x ,
+.IR input->mouseevent.start_y ,
+.IR input->mouseevent.end_x ,
+and
+.IR input->mouseevent.end_y
+will also be set to indicate the region selected by
+the application.
+.RE
+.SH RETURN VALUE
+The
+.BR libterminput_read ()
+function returns 0 or 1 upon successful completion,
+1 if there was input, 0 if the input closed (or an
+empty packet was sent, such as on control+d);
+otherwise the
+.BR libterminput_read ()
+function returns
+.B -1
+and set
+.I errno
+it indicate the error.
+
+.SH ERRORS
+The
+.BR libterminput_read ()
+function may fail for any reason specified for the
+.BR read (3)
+function.
+
+.SH EXAMPLES
+None.
+
+.SH APPLICATION USAGE
+None.
+
+.SH RATIONALE
+None.
+
+.SH FUTURE DIRECTIONS
+None.
+
+.SH NOTES
+None.
+
+.SH BUGS
+None.
+
+.SH SEE ALSO
+.BR libterminput_set_flags (3)
