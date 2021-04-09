@@ -12,10 +12,20 @@
  * terminal support this flag if set.
  */
 enum libterminput_flags {
-	LIBTERMINPUT_DECSET_1005    = 0x0001,
-	LIBTERMINPUT_MACRO_ON_CSI_M = 0x0002,
-	LIBTERMINPUT_PAUSE_ON_CSI_P = 0x0004,
-	LIBTERMINPUT_INS_ON_CSI_AT  = 0x0008
+	LIBTERMINPUT_DECSET_1005      = 0x0001,
+	LIBTERMINPUT_MACRO_ON_CSI_M   = 0x0002,
+	LIBTERMINPUT_PAUSE_ON_CSI_P   = 0x0004,
+	LIBTERMINPUT_INS_ON_CSI_AT    = 0x0008,
+	LIBTERMINPUT_SEPARATE_BACKTAB = 0x0010,
+
+	/**
+	 * If an ESC is received without anything after it,
+	 * return ESC keypress. This is not always desirable
+	 * behaviour as the use may manually press ESC to
+	 * simulate a keypress that terminal does not support
+	 * (yes, this is a real world issue).
+	 */
+	LIBTERMINPUT_ESC_ON_BLOCK     = 0x0020
 };
 
 enum libterminput_mod {
@@ -30,8 +40,9 @@ enum libterminput_key {
 	LIBTERMINPUT_DOWN,
 	LIBTERMINPUT_RIGHT,
 	LIBTERMINPUT_LEFT,
-	LIBTERMINPUT_BEGIN, /* keypad 5 without numlock */
-	LIBTERMINPUT_TAB,   /* backtab if with shift */
+	LIBTERMINPUT_BEGIN,   /* keypad 5 without numlock */
+	LIBTERMINPUT_TAB,     /* backtab is interpreted as shift+tab by default */
+	LIBTERMINPUT_BACKTAB, /* requires LIBTERMINPUT_SEPARATE_BACKTAB */
 	LIBTERMINPUT_F1,
 	LIBTERMINPUT_F2,
 	LIBTERMINPUT_F3,

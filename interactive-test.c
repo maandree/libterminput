@@ -34,6 +34,14 @@ main(void)
 		fprintf(stderr, "LIBTERMINPUT_INS_ON_CSI_AT set\n");
 		libterminput_set_flags(&ctx, LIBTERMINPUT_INS_ON_CSI_AT);
 	}
+	if (getenv("TEST_LIBTERMINPUT_SEPARATE_BACKTAB")) {
+		fprintf(stderr, "LIBTERMINPUT_SEPARATE_BACKTAB set\n");
+		libterminput_set_flags(&ctx, LIBTERMINPUT_SEPARATE_BACKTAB);
+	}
+	if (getenv("TEST_LIBTERMINPUT_ESC_ON_BLOCK")) {
+		fprintf(stderr, "LIBTERMINPUT_ESC_ON_BLOCK set\n");
+		libterminput_set_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
+	}
 
 	if (tcgetattr(STDERR_FILENO, &stty)) {
 		perror("tcgetattr STDERR_FILENO");
@@ -61,6 +69,7 @@ main(void)
 			case LIBTERMINPUT_LEFT:            printf("\t%s: %s\n", "key", "left");            break;
 			case LIBTERMINPUT_BEGIN:           printf("\t%s: %s\n", "key", "begin");           break;
 			case LIBTERMINPUT_TAB:             printf("\t%s: %s\n", "key", "tab");             break;
+			case LIBTERMINPUT_BACKTAB:         printf("\t%s: %s\n", "key", "backtab");         break;
 			case LIBTERMINPUT_F1:              printf("\t%s: %s\n", "key", "f1");              break;
 			case LIBTERMINPUT_F2:              printf("\t%s: %s\n", "key", "f2");              break;
 			case LIBTERMINPUT_F3:              printf("\t%s: %s\n", "key", "f3");              break;

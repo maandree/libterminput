@@ -63,7 +63,14 @@ again:
 			}
 		}
 	} else if (c == 033 && !*ctx->key) {
-		/* ESC at the beginning, save as a Meta/ESC */
+		/* ESC at the beginning, save as a Meta/ESC (for default behaviour) */
+		if ((ctx->flags & LIBTERMINPUT_ESC_ON_BLOCK) && ctx->stored_tail == ctx->stored_head) {
+			input->symbol[0] = (char)c;
+			input->symbol[1] = '\0';
+			input->mods = ctx->mods;
+			ctx->mods = 0;
+			return 1;
+		}
 		ctx->meta += 1;
 	} else if (c == 0) {
 		/* CTRL on Space */
@@ -430,8 +437,12 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'U': input->keypress.key = LIBTERMINPUT_NEXT;  break;
 			case 'V': input->keypress.key = LIBTERMINPUT_PRIOR; break;
 			case 'Z':
-				input->keypress.key = LIBTERMINPUT_TAB;
-				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				if (!(ctx->flags & LIBTERMINPUT_SEPARATE_BACKTAB)) {
+					input->keypress.key = LIBTERMINPUT_TAB;
+					input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				} else {
+					input->keypress.key = LIBTERMINPUT_BACKTAB;
+				}
 				break;
 			case 'a':
 				input->keypress.key = LIBTERMINPUT_UP;
@@ -845,6 +856,10 @@ again:
 			break;
 		case '\n':
 			input->keypress.key = LIBTERMINPUT_ENTER;
+			input->keypress.symbol[0] = '\0';
+			break;
+		case 033:
+			input->keypress.key = LIBTERMINPUT_ESC;
 			input->keypress.symbol[0] = '\0';
 			break;
 		default:
