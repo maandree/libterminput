@@ -5,3 +5,14 @@ DESCRIPTION
 	libterminput is a small library that parses input from the
 	terminal. libterminput does not use terminfo, but recognises
 	common sequences.
+
+	libterminput provides the following functions:
+
+	libterminput_read(3)
+		Read and parse input from the terminal.
+
+	libterminput_set_flags(3)
+		Add input parsing flags.
+
+	libterminput_clear_flags(3)
+		Remove input parsing flags.

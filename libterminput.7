@@ -1,0 +1,24 @@
+.TH LIBTERMINPUT 7 LIBTERMINPUT
+.SH NAME
+libterminput \- A terminal input parsing library
+
+.SH DESCRIPTION
+.B libterminput
+is a small library that parses input from the terminal.
+.B libterminput
+does not use terminfo, but recognises common sequences.
+.PP
+libterminput provides the following functions:
+.TP
+.BR libterminput_read (3)
+Read and parse input from the terminal.
+.TP
+.BR libterminput_set_flags (3)
+Add input parsing flags.
+.TP
+.BR libterminput_clear_flags (3)
+Remove input parsing flags.
+
+.SH SEE ALSO
+.BR libterminput_read (3),
+.BR libterminput_set_flags (3)
