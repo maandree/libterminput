@@ -12,11 +12,11 @@
  * terminal support this flag if set.
  */
 enum libterminput_flags {
-	LIBTERMINPUT_DECSET_1005      = 0x0001,
-	LIBTERMINPUT_MACRO_ON_CSI_M   = 0x0002,
-	LIBTERMINPUT_PAUSE_ON_CSI_P   = 0x0004,
-	LIBTERMINPUT_INS_ON_CSI_AT    = 0x0008,
-	LIBTERMINPUT_SEPARATE_BACKTAB = 0x0010,
+	LIBTERMINPUT_DECSET_1005              = 0x0001,
+	LIBTERMINPUT_MACRO_ON_CSI_M           = 0x0002,
+	LIBTERMINPUT_PAUSE_ON_CSI_P           = 0x0004,
+	LIBTERMINPUT_INS_ON_CSI_AT            = 0x0008,
+	LIBTERMINPUT_SEPARATE_BACKTAB         = 0x0010,
 
 	/**
 	 * If an ESC is received without anything after it,
@@ -25,7 +25,9 @@ enum libterminput_flags {
 	 * simulate a keypress that terminal does not support
 	 * (yes, this is a real world issue).
 	 */
-	LIBTERMINPUT_ESC_ON_BLOCK     = 0x0020
+	LIBTERMINPUT_ESC_ON_BLOCK             = 0x0020,
+
+	LIBTERMINPUT_AWAITING_CURSOR_POSITION = 0x0040
 };
 
 enum libterminput_mod {
@@ -107,7 +109,10 @@ enum libterminput_type {
 	LIBTERMINPUT_BRACKETED_PASTE_START,
 	LIBTERMINPUT_BRACKETED_PASTE_END,
 	LIBTERMINPUT_TEXT,
-	LIBTERMINPUT_MOUSEEVENT
+	LIBTERMINPUT_MOUSEEVENT,
+	LIBTERMINPUT_TERMINAL_IS_OK,     /* response to CSI 5 n */
+	LIBTERMINPUT_TERMINAL_IS_NOT_OK, /* response to CSI 5 n */
+	LIBTERMINPUT_CURSOR_POSITION     /* response to CSI 6 n */
 };
 
 enum libterminput_event {
@@ -126,6 +131,12 @@ struct libterminput_keypress {
 	char symbol[7];               /* use if .key == LIBTERMINPUT_SYMBOL */
 };
 
+struct libterminput_text {
+	enum libterminput_type type;
+	size_t nbytes;
+	char bytes[512];
+};
+
 struct libterminput_mouseevent {
 	enum libterminput_type type;
 	enum libterminput_mod mods;      /* Set to 0 for LIBTERMINPUT_HIGHLIGHT_INSIDE and LIBTERMINPUT_HIGHLIGHT_OUTSIDE */
@@ -139,10 +150,10 @@ struct libterminput_mouseevent {
 	size_t end_y;   /* Only set for LIBTERMINPUT_HIGHLIGHT_OUTSIDE */
 };
 
-struct libterminput_text {
+struct libterminput_position {
 	enum libterminput_type type;
-	size_t nbytes;
-	char bytes[512];
+	size_t x;
+	size_t y;
 };
 
 union libterminput_input {
@@ -150,6 +161,7 @@ union libterminput_input {
 	struct libterminput_keypress keypress;     /* use if .type == LIBTERMINPUT_KEYPRESS */
 	struct libterminput_text text;             /* use if .type == LIBTERMINPUT_TEXT */
 	struct libterminput_mouseevent mouseevent; /* use if .type == LIBTERMINPUT_MOUSEEVENT */
+	struct libterminput_position position;     /* use if .type == LIBTERMINPUT_CURSOR_POSITION */
 };
 
 

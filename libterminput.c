@@ -398,9 +398,15 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				}
 				break;
 			case 'P':
-				input->keypress.key = LIBTERMINPUT_F1;
-				if (ctx->flags & LIBTERMINPUT_PAUSE_ON_CSI_P)
-					input->keypress.key = LIBTERMINPUT_PAUSE;
+				if ((ctx->flags & LIBTERMINPUT_AWAITING_CURSOR_POSITION) && nnums == 2) {
+					input->position.type = LIBTERMINPUT_CURSOR_POSITION;
+					input->position.y = (size_t)nums[0] + (size_t)!nums[0];
+					input->position.x = (size_t)nums[1] + (size_t)!nums[1];
+				} else {
+					input->keypress.key = LIBTERMINPUT_F1;
+					if (ctx->flags & LIBTERMINPUT_PAUSE_ON_CSI_P)
+						input->keypress.key = LIBTERMINPUT_PAUSE;
+				}
 				break;
 			case 'Q': input->keypress.key = LIBTERMINPUT_F2;    break;
 			case 'R': input->keypress.key = LIBTERMINPUT_F3;    break;
@@ -459,6 +465,15 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'd':
 				input->keypress.key = LIBTERMINPUT_LEFT;
 				input->keypress.mods |= LIBTERMINPUT_SHIFT;
+				break;
+			case 'n':
+				if (nnums == 1 && nums[0] == '0') {
+					input->type = LIBTERMINPUT_TERMINAL_IS_OK;
+				} else if (nnums == 1 && nums[0] == '3') {
+					input->type = LIBTERMINPUT_TERMINAL_IS_NOT_OK;
+				} else {
+					goto suppress;
+				}
 				break;
 			case 't':
 				/* Parsing output for legacy mouse highlight tracking output (\e[?1001h). */

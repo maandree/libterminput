@@ -34,15 +34,17 @@ The available flags are
 .B LIBTERMINPUT_DECSET_1005
 The sequence
 .B CSI M
-shall be parsed be parse as a DECSET 1005 sequence
-which is incompatible with legacy mouse tracking.
-This flag shall only be set if DECSET 1005 has sent
-to the terminal and the user is sure it is supported
-by the terminal.
+shall be parsed be parse as a
+.I DECSET 1005
+sequence which is incompatible with legacy mouse
+tracking. This flag shall only be set if
+.I DECSET 1005
+has sent to the terminal and the user is sure it
+is supported by the terminal.
 .TP
 .B LIBTERMINPUT_MACRO_ON_CSI_M
 The sequence
-.B CSI Pm M
+.BI "CSI " Pm " M"
 shall be parsed as a key press of the macro key.
 This is incompatible with all mouse tracking modes
 except
@@ -54,13 +56,13 @@ and therefore uses it, can safely use this flag.
 .TP
 .B LIBTERMINPUT_PAUSE_ON_CSI_P
 The sequence
-.B CSI Pm M
+.BI "CSI " Pm " M"
 shall be parsed as a key press of the pause key
 instead of the F1 key.
 .TP
 .B LIBTERMINPUT_INS_ON_CSI_AT
 The sequence
-.B CSI Pm @
+.BI "CSI " Pm " @"
 shall be parsed as a key press of the insert key
 instead of a number of possible special keys
 combined with the control and shift modifiers.
@@ -75,11 +77,20 @@ a forward arrow (tab); but most users are unfamiliar
 with backtab, and just see it as shift+tab.
 .TP
 .B LIBTERMINPUT_ESC_ON_BLOCK
-If an ESC is received without anything after it,
-it shall be parsed as an ESC keypress. This is not
+If an ESC is received without anything after it, it
+shall be parsed as an escape keypress. This is not
 always desirable behaviour as the user may manually
-press ESC to simulate a keypress that terminal does
-not support (yes, this is a real world issue).
+press escape to simulate a keypress that terminal
+does not support (yes, this is a real world issue).
+.TP
+.B LIBTERMINPUT_AWAITING_CURSOR_POSITION
+The sequence
+.BI "CSI " Ps " ; " Rs " R"
+shall be parsed as a cursor position report rather
+than as an F1 or pause key press. This flag takes
+precedence over the
+.B LIBTERMINPUT_PAUSE_ON_CSI_P
+flag.
 .PP
 .I ctx
 must have been zero-initialised, e.g. with

@@ -85,7 +85,10 @@ enum libterminput_type {
 	LIBTERMINPUT_BRACKETED_PASTE_START,
 	LIBTERMINPUT_BRACKETED_PASTE_END,
 	LIBTERMINPUT_TEXT,
-	LIBTERMINPUT_MOUSEEVENT
+	LIBTERMINPUT_MOUSEEVENT,
+	LIBTERMINPUT_TERMINAL_IS_OK,
+	LIBTERMINPUT_TERMINAL_IS_NOT_OK,
+	LIBTERMINPUT_CURSOR_POSITION
 };
 
 enum libterminput_event {
@@ -104,6 +107,12 @@ struct libterminput_keypress {
 	char                   symbol[7];
 };
 
+struct libterminput_text {
+	enum libterminput_type type;
+	size_t                 nbytes;
+	char                   bytes[512];
+};
+
 struct libterminput_mouseevent {
 	enum libterminput_type   type;
 	enum libterminput_mod    mods;
@@ -117,10 +126,10 @@ struct libterminput_mouseevent {
 	size_t                   end_y;
 };
 
-struct libterminput_text {
+struct libterminput_position {
 	enum libterminput_type type;
-	size_t                 nbytes;
-	char                   bytes[512];
+	size_t                 x;
+	size_t                 y;
 };
 
 union libterminput_input {
@@ -393,6 +402,29 @@ and
 will also be set to indicate the region selected by
 the application.
 .RE
+.TP
+.B LIBTERMINPUT_TERMINAL_IS_OK
+OK response for a device status query.
+.TP
+.B LIBTERMINPUT_TERMINAL_IS_NOT_OK
+Not-OK response for a device status query.
+.TP
+.B LIBTERMINPUT_CURSOR_POSITION
+Cursor position report even as a response to a
+cursor position query. The line (indexed starting
+with 1 at the top) the cursor is on will be
+stored in
+.I input->position.y
+and the column (indexed starting with 1 at the
+left edge) will be stored in
+.I input->position.x
+
+This event can conflict with both F1 and pause
+key processes, therefore the
+.B LIBTERMINPUT_AWAITING_CURSOR_POSITION
+flag must be set with the
+.BR libterminput_set_flags (3)
+function.
 .SH RETURN VALUE
 The
 .BR libterminput_read ()
