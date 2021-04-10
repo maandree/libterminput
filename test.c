@@ -237,183 +237,258 @@ static const struct mouse {
 };
 
 
-int
-main(void)
-{
 #define TEST(EXPR)\
 	do {\
 		if (EXPR)\
 			break;\
-		fprintf(stderr, "Failure at line %i, with errno = %i (%s): %s\n", __LINE__, errno, strerror(errno), #EXPR);\
+		fprintf(stderr, "Failure at line %i, with errno = %i (%s): %s\n",\
+		        __LINE__, errno, strerror(errno), #EXPR);\
+		if (lineno)\
+			fprintf(stderr, "  from line %i\n", lineno);\
+		if (lineno2)\
+			fprintf(stderr, "  from line %i\n", lineno2);\
+		if (lineno3)\
+			fprintf(stderr, "  from line %i\n", lineno3);\
 		exit(1);\
 	} while (0)
 
 #define TYPE_MEM(STR, LEN, T)\
 	do {\
-		alarm(5);\
-		if (LEN)\
-			TEST(write(fds[1], STR, (LEN)) == (LEN));\
-		do {\
-			TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
-		} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));\
-		TEST(input.type == (T));\
+		lineno = __LINE__;\
+		type_mem(STR, LEN, T);\
+		lineno = 0;\
 	} while (0)
 
 #define TYPE(STR, T)\
 	do {\
-		alarm(5);\
-		if ((STR) && *(const char *)(STR))\
-			TEST(write(fds[1], STR, strlen(STR)) == (ssize_t)strlen(STR));\
-		do {\
-			TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
-		} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));\
-		TEST(input.type == (T));\
+		lineno = __LINE__;\
+		type_mem(STR, (STR) ? strlen(STR) : 0, T);\
+		lineno = 0;\
 	} while (0)
 
 #define KEYPRESS_(STR1, STR2, STR3, STR4, KEY, MODS, TIMES)\
 	do {\
-		int times__ = (TIMES);\
-		alarm(5);\
-		stpcpy(stpcpy(stpcpy(stpcpy(buffer, STR1), STR2), STR3), STR4);\
-		if (*buffer)\
-			TEST(write(fds[1], buffer, strlen(buffer)) == (ssize_t)strlen(buffer));\
-		for (; times__; times__--) {\
-			do {\
-				TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
-			} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));\
-			TEST(input.type == LIBTERMINPUT_KEYPRESS);\
-			TEST(input.keypress.key == (KEY));\
-			TEST(input.keypress.mods == (MODS));\
-			TEST(input.keypress.times == times__);\
-		}\
-		if (buffer[0] && buffer[1]) {\
-			size_t i__;\
-			for (i__ = 0; buffer[i__ + 1]; i__++) {\
-				TEST(write(fds[1], &buffer[i__], 1) == 1);\
-				TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
-				TEST(input.type == LIBTERMINPUT_NONE);\
-			}\
-			TEST(write(fds[1], &buffer[i__], 1) == 1);\
-			TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
-			TEST(input.keypress.key == (KEY));\
-			TEST(input.keypress.mods == (MODS));\
-			TEST(input.keypress.times == (TIMES));\
-			for (times__ = (TIMES) - 1; times__; times__--) {\
-				TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
-				TEST(input.type == LIBTERMINPUT_KEYPRESS);\
-				TEST(input.keypress.key == (KEY));\
-				TEST(input.keypress.mods == (MODS));\
-				TEST(input.keypress.times == times__);\
-			}\
-		}\
+		lineno = __LINE__;\
+		keypress_(STR1, STR2, STR3, STR4, KEY, MODS, TIMES);\
+		lineno = 0;\
 	} while (0)
 
 #define KEYPRESS(A, B, KEY, MODS)\
 	do {\
-		KEYPRESS_("",     A, "",    B, (KEY), (MODS), 1);\
-		KEYPRESS_("",     A, "4",   B, (KEY), (MODS), 4);\
-		KEYPRESS_("",     A, "1;1", B, (KEY), (MODS), 1);\
-		KEYPRESS_("",     A, "1;2", B, (KEY), (MODS) | LIBTERMINPUT_SHIFT, 1);\
-		KEYPRESS_("",     A, "1;3", B, (KEY), (MODS) | LIBTERMINPUT_META, 1);\
-		KEYPRESS_("",     A, "1;4", B, (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META, 1);\
-		KEYPRESS_("",     A, "1;5", B, (KEY), (MODS) | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_("",     A, "1;6", B, (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_("",     A, "1;7", B, (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_("",     A, "1;8", B, (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_("",     A, "2;5", B, (KEY), (MODS) | LIBTERMINPUT_CTRL, 2);\
-		KEYPRESS_("\033", A, "",    B, (KEY), (MODS) | LIBTERMINPUT_META, 1);\
-		KEYPRESS_("\033", A, "4",   B, (KEY), (MODS) | LIBTERMINPUT_META, 4);\
-		KEYPRESS_("\033", A, "1;1", B, (KEY), (MODS) | LIBTERMINPUT_META, 1);\
-		KEYPRESS_("\033", A, "1;2", B, (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_SHIFT, 1);\
-		KEYPRESS_("\033", A, "1;3", B, (KEY), (MODS) | LIBTERMINPUT_META, 1);\
-		KEYPRESS_("\033", A, "1;4", B, (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META, 1);\
-		KEYPRESS_("\033", A, "1;5", B, (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_("\033", A, "1;6", B, (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_("\033", A, "1;7", B, (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_("\033", A, "1;8", B, (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_("\033", A, "2;5", B, (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 2);\
+		lineno2 = __LINE__;\
+		keypress(A, B, KEY, MODS);\
+		lineno2 = 0;\
 	} while (0)
 
 #define KEYNUM_(A, B, C, KEY, MODS)\
 	do {\
-		sprintf(numbuf, "%i", B);\
-		KEYPRESS_(A, numbuf, C, "~", (KEY), (MODS), 1);\
-		KEYPRESS_(A, numbuf, C, "^", (KEY), (MODS) | LIBTERMINPUT_CTRL, 1);\
-		KEYPRESS_(A, numbuf, C, "$", (KEY), (MODS) | LIBTERMINPUT_SHIFT, 1);\
-		KEYPRESS_(A, numbuf, C, "@", (KEY), (MODS) | LIBTERMINPUT_CTRL | LIBTERMINPUT_SHIFT, 1);\
+		lineno2 = __LINE__;\
+		keynum_(A, B, C, KEY, MODS);\
+		lineno2 = 0;\
 	} while (0)
 
 #define KEYNUM(NUM, KEY, MODS)\
 	do {\
-		KEYNUM_("\033[",     NUM, ";1", (KEY), (MODS));\
-		KEYNUM_("\033[",     NUM, ";2", (KEY), (MODS) | LIBTERMINPUT_SHIFT);\
-		KEYNUM_("\033[",     NUM, ";3", (KEY), (MODS) | LIBTERMINPUT_META);\
-		KEYNUM_("\033[",     NUM, ";4", (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META);\
-		KEYNUM_("\033[",     NUM, ";5", (KEY), (MODS) | LIBTERMINPUT_CTRL);\
-		KEYNUM_("\033[",     NUM, ";6", (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_CTRL);\
-		KEYNUM_("\033[",     NUM, ";7", (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);\
-		KEYNUM_("\033[",     NUM, ";8", (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);\
-		KEYNUM_("\033\033[", NUM, ";1", (KEY), (MODS) | LIBTERMINPUT_META);\
-		KEYNUM_("\033\033[", NUM, ";2", (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_SHIFT);\
-		KEYNUM_("\033\033[", NUM, ";3", (KEY), (MODS) | LIBTERMINPUT_META);\
-		KEYNUM_("\033\033[", NUM, ";4", (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META);\
-		KEYNUM_("\033\033[", NUM, ";5", (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);\
-		KEYNUM_("\033\033[", NUM, ";6", (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);\
-		KEYNUM_("\033\033[", NUM, ";7", (KEY), (MODS) | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);\
-		KEYNUM_("\033\033[", NUM, ";8", (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);\
+		lineno3 = __LINE__;\
+		keynum(NUM, KEY, MODS);	\
+		lineno3 = 0;\
 	} while (0)
 
-#define KEYPRESS_SPECIAL_CHAR(CHAR, KEY)\
+#define KEYPRESS_SPECIAL_CHAR(CHR, KEY)\
 	do {\
-		buffer[0] = (CHAR);\
-		buffer[1] = '\0';\
-		TYPE(buffer, LIBTERMINPUT_KEYPRESS);\
-		TEST(input.keypress.mods == 0);\
-		TEST(input.keypress.times == 1);\
-		TEST(input.keypress.key == (KEY));\
-		buffer[0] = '\033';\
-		buffer[1] = (CHAR);\
-		buffer[2] = '\0';\
-		TYPE(buffer, LIBTERMINPUT_KEYPRESS);\
-		TEST(input.keypress.mods == LIBTERMINPUT_META);\
-		TEST(input.keypress.times == 1);\
-		TEST(input.keypress.key == (KEY));\
-		buffer[0] = (char)((CHAR) | 0x80);\
-		buffer[1] = '\0';\
-		TYPE(buffer, LIBTERMINPUT_KEYPRESS);\
-		TEST(input.keypress.mods == LIBTERMINPUT_META);\
-		TEST(input.keypress.times == 1);\
-		TEST(input.keypress.key == (KEY));\
+		lineno2 = __LINE__;\
+		keypress_special_char(CHR, KEY);\
+		lineno2 = 0;\
 	} while (0)
 
 #define MOUSE(STR, EV, BTN, MODS, X, Y)\
 	do {\
-		TYPE(STR, LIBTERMINPUT_MOUSEEVENT);\
-		TEST(input.mouseevent.button == (BTN));\
-		TEST(input.mouseevent.mods == (MODS));\
-		TEST(input.mouseevent.event == (EV));\
-		TEST(input.mouseevent.x == (X));\
-		TEST(input.mouseevent.y == (Y));\
+		lineno2 = __LINE__;\
+		mouse(STR, EV, BTN, MODS, X, Y);\
+		lineno2 = 0;\
 	} while (0)
 
 #define MOUSEHO(STR, SX, SY, EX, EY, MX, MY)\
 	do {\
-		TYPE(STR, LIBTERMINPUT_MOUSEEVENT);\
-		TEST(input.mouseevent.button == LIBTERMINPUT_BUTTON1);\
-		TEST(input.mouseevent.mods == 0);\
-		TEST(input.mouseevent.event == LIBTERMINPUT_HIGHLIGHT_OUTSIDE);\
-		TEST(input.mouseevent.start_x == (size_t)(SX));\
-		TEST(input.mouseevent.start_y == (size_t)(SY));\
-		TEST(input.mouseevent.end_x == (size_t)(EX));\
-		TEST(input.mouseevent.end_y == (size_t)(EY));\
-		TEST(input.mouseevent.x == (size_t)(MX));\
-		TEST(input.mouseevent.y == (size_t)(MY));\
+		lineno2 = __LINE__;\
+		mouseho(STR, (size_t)(SX), (size_t)(SY), (size_t)(EX), (size_t)(EY), (size_t)(MX), (size_t)(MY));\
+		lineno2 = 0;\
 	} while (0)
 
-	char buffer[512], numbuf[3 * sizeof(int) + 2];
-	struct libterminput_state ctx;
-	union libterminput_input input;
-	int fds[2];
+
+static int lineno = 0;
+static int lineno2 = 0;
+static int lineno3 = 0;
+static char buffer[512], numbuf[3 * sizeof(int) + 2];
+static struct libterminput_state ctx;
+static union libterminput_input input;
+static int fds[2];
+
+
+static void
+type_mem(const char *str, size_t len, enum libterminput_type type)
+{
+	alarm(5);
+	if (len)
+		TEST(write(fds[1], str, len) == len);
+	do {
+		TEST(libterminput_read(fds[0], &input, &ctx) == 1);
+	} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
+	TEST(input.type == type);
+}
+
+static void
+keypress_(const char *str1, const char *str2, const char *str3, const char *str4,
+          enum libterminput_key key, enum libterminput_mod mods, unsigned long long int times)
+{
+	int times_;
+	size_t i;
+	alarm(5);
+	stpcpy(stpcpy(stpcpy(stpcpy(buffer, str1), str2), str3), str4);
+	if (*buffer)
+		TEST(write(fds[1], buffer, strlen(buffer)) == (ssize_t)strlen(buffer));
+	for (times_ = times; times_; times_--) {
+		do {
+			TEST(libterminput_read(fds[0], &input, &ctx) == 1);
+		} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
+		TEST(input.type == LIBTERMINPUT_KEYPRESS);
+		TEST(input.keypress.key == key);
+		TEST(input.keypress.mods == mods);
+		TEST(input.keypress.times == times_);
+	}
+	if (buffer[0] && buffer[1]) {
+		for (i = 0; buffer[i + 1]; i++) {
+			TEST(write(fds[1], &buffer[i], 1) == 1);
+			TEST(libterminput_read(fds[0], &input, &ctx) == 1);
+			TEST(input.type == LIBTERMINPUT_NONE);
+		}
+		TEST(write(fds[1], &buffer[i], 1) == 1);
+		TEST(libterminput_read(fds[0], &input, &ctx) == 1);
+		TEST(input.keypress.key == key);
+		TEST(input.keypress.mods == mods);
+		TEST(input.keypress.times == times);
+		for (times_ = times - 1; times_; times_--) {
+			TEST(libterminput_read(fds[0], &input, &ctx) == 1);
+			TEST(input.type == LIBTERMINPUT_KEYPRESS);
+			TEST(input.keypress.key == key);
+			TEST(input.keypress.mods == mods);
+			TEST(input.keypress.times == times_);
+		}
+	}
+}
+
+static void
+keypress(const char *a, const char *b, enum libterminput_key key, enum libterminput_mod mods)
+{
+	KEYPRESS_("",     a, "",    b, key, mods, 1);
+	KEYPRESS_("",     a, "4",   b, key, mods, 4);
+	KEYPRESS_("",     a, "1;1", b, key, mods, 1);
+	KEYPRESS_("",     a, "1;2", b, key, mods | LIBTERMINPUT_SHIFT, 1);
+	KEYPRESS_("",     a, "1;3", b, key, mods | LIBTERMINPUT_META, 1);
+	KEYPRESS_("",     a, "1;4", b, key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META, 1);
+	KEYPRESS_("",     a, "1;5", b, key, mods | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_("",     a, "1;6", b, key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_("",     a, "1;7", b, key, mods | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_("",     a, "1;8", b, key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_("",     a, "2;5", b, key, mods | LIBTERMINPUT_CTRL, 2);
+	KEYPRESS_("\033", a, "",    b, key, mods | LIBTERMINPUT_META, 1);
+	KEYPRESS_("\033", a, "4",   b, key, mods | LIBTERMINPUT_META, 4);
+	KEYPRESS_("\033", a, "1;1", b, key, mods | LIBTERMINPUT_META, 1);
+	KEYPRESS_("\033", a, "1;2", b, key, mods | LIBTERMINPUT_META | LIBTERMINPUT_SHIFT, 1);
+	KEYPRESS_("\033", a, "1;3", b, key, mods | LIBTERMINPUT_META, 1);
+	KEYPRESS_("\033", a, "1;4", b, key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META, 1);
+	KEYPRESS_("\033", a, "1;5", b, key, mods | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_("\033", a, "1;6", b, key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_("\033", a, "1;7", b, key, mods | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_("\033", a, "1;8", b, key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_("\033", a, "2;5", b, key, mods | LIBTERMINPUT_META | LIBTERMINPUT_CTRL, 2);
+}
+
+static void
+keynum_(const char *a, const char *b, const char *c, enum libterminput_key key, enum libterminput_mod mods)
+{
+	KEYPRESS_(a, b, c, "~", key, mods, 1);
+	KEYPRESS_(a, b, c, "^", key, mods | LIBTERMINPUT_CTRL, 1);
+	KEYPRESS_(a, b, c, "$", key, mods | LIBTERMINPUT_SHIFT, 1);
+	KEYPRESS_(a, b, c, "@", key, mods | LIBTERMINPUT_CTRL | LIBTERMINPUT_SHIFT, 1);
+}
+
+static void
+keynum(int num, enum libterminput_key key, enum libterminput_mod mods)
+{
+	sprintf(numbuf, "%i", num);
+	KEYNUM_("\033[",     numbuf, ";1", key, mods);
+	KEYNUM_("\033[",     numbuf, ";2", key, mods | LIBTERMINPUT_SHIFT);
+	KEYNUM_("\033[",     numbuf, ";3", key, mods | LIBTERMINPUT_META);
+	KEYNUM_("\033[",     numbuf, ";4", key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META);
+	KEYNUM_("\033[",     numbuf, ";5", key, mods | LIBTERMINPUT_CTRL);
+	KEYNUM_("\033[",     numbuf, ";6", key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_CTRL);
+	KEYNUM_("\033[",     numbuf, ";7", key, mods | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	KEYNUM_("\033[",     numbuf, ";8", key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	KEYNUM_("\033\033[", numbuf, ";1", key, mods | LIBTERMINPUT_META);
+	KEYNUM_("\033\033[", numbuf, ";2", key, mods | LIBTERMINPUT_META | LIBTERMINPUT_SHIFT);
+	KEYNUM_("\033\033[", numbuf, ";3", key, mods | LIBTERMINPUT_META);
+	KEYNUM_("\033\033[", numbuf, ";4", key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META);
+	KEYNUM_("\033\033[", numbuf, ";5", key, mods | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	KEYNUM_("\033\033[", numbuf, ";6", key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	KEYNUM_("\033\033[", numbuf, ";7", key, mods | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	KEYNUM_("\033\033[", numbuf, ";8", key, mods | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+}
+
+static void
+keypress_special_char(char chr, enum libterminput_key key)
+{
+	buffer[0] = chr;
+	buffer[1] = '\0';
+	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.key == key);
+	buffer[0] = '\033';
+	buffer[1] = chr;
+	buffer[2] = '\0';
+	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.mods == LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.key == key);
+	buffer[0] = (char)(chr | 0x80);
+	buffer[1] = '\0';
+	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.mods == LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.key == key);
+}
+
+static void
+mouse(const char *str, enum libterminput_event ev, enum libterminput_button btn, enum libterminput_mod mods, size_t x, size_t y)
+{
+	TYPE(str, LIBTERMINPUT_MOUSEEVENT);
+	TEST(input.mouseevent.button == btn);
+	TEST(input.mouseevent.mods == mods);
+	TEST(input.mouseevent.event == ev);
+	TEST(input.mouseevent.x == x);
+	TEST(input.mouseevent.y == y);
+}
+
+static void
+mouseho(const char *str, size_t sx, size_t sy, size_t ex, size_t ey, size_t mx, size_t my)
+{
+	TYPE(str, LIBTERMINPUT_MOUSEEVENT);
+	TEST(input.mouseevent.button == LIBTERMINPUT_BUTTON1);
+	TEST(input.mouseevent.mods == 0);
+	TEST(input.mouseevent.event == LIBTERMINPUT_HIGHLIGHT_OUTSIDE);
+	TEST(input.mouseevent.start_x == sx);
+	TEST(input.mouseevent.start_y == sy);
+	TEST(input.mouseevent.end_x == ex);
+	TEST(input.mouseevent.end_y == ey);
+	TEST(input.mouseevent.x == mx);
+	TEST(input.mouseevent.y == my);
+}
+
+
+int
+main(void)
+{
 	size_t i;
 
 	memset(&ctx, 0, sizeof(ctx));
