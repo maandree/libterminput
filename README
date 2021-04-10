@@ -11,6 +11,9 @@ DESCRIPTION
 	libterminput_read(3)
 		Read and parse input from the terminal.
 
+	libterminput_is_ready(3)
+		Check if there is read data buffered.
+
 	libterminput_set_flags(3)
 		Add input parsing flags.
 
