@@ -199,7 +199,7 @@ int libterminput_read(int fd, union libterminput_input *input, struct libterminp
 inline int
 libterminput_is_ready(union libterminput_input *input, struct libterminput_state *ctx)
 {
-	if (!ctx->inited || ctx->paused)
+	if (!ctx->inited || ctx->paused || ctx->mouse_tracking)
 		return 0;
 	if (input->type == LIBTERMINPUT_KEYPRESS && input->keypress.times > 1)
 		return 1;

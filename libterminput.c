@@ -6,7 +6,6 @@
 #include <limits.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdio.h>
 
 
 struct input {
@@ -148,6 +147,7 @@ encode_utf8(unsigned long long int codepoint, char buffer[7])
 static int
 check_utf8_char(const char *s, size_t *lenp, size_t size)
 {
+	size_t i;
 	*lenp = 0;
 	if (!size) {
 		return 0;
@@ -155,47 +155,25 @@ check_utf8_char(const char *s, size_t *lenp, size_t size)
 		*lenp = 1;
 		return 1;
 	} else if ((*s & 0xE0) == 0xC0) {
-		goto need_2;
+		*lenp = 2;
 	} else if ((*s & 0xF0) == 0xE0) {
-		goto need_3;
+		*lenp = 3;
 	} else if ((*s & 0xF8) == 0xF0) {
-		goto need_4;
+		*lenp = 4;
 	} else if ((*s & 0xFC) == 0xF8) {
-		goto need_5;
+		*lenp = 5;
 	} else if ((*s & 0xFE) == 0xFC) {
-		goto need_6;
+		*lenp = 6;
 	} else {
 		*lenp = 0;
 		return -1;
 	}
-
-need_6:
-	if (!size--) return 0;
-	if ((s[5] & 0xC0) != 0x80) return -1;
-	++*lenp;
-
-need_5:
-	if (!size--) return 0;
-	if ((s[4] & 0xC0) != 0x80) return -1;
-	++*lenp;
-
-need_4:
-	if (!size--) return 0;
-	if ((s[3] & 0xC0) != 0x80) return -1;
-	++*lenp;
-
-need_3:
-	if (!size--) return 0;
-	if ((s[2] & 0xC0) != 0x80) return -1;
-	++*lenp;
-
-need_2:
-	if (!size--) return 0;
-	if ((s[1] & 0xC0) != 0x80) return -1;
-	++*lenp;
-
-	if (!size--) return 0;
-	++*lenp;
+	for (i = 1; i < *lenp; i++) {
+		if (i == size)
+			return 0;
+		if ((s[i] & 0xC0) != 0x80)
+			return -1;
+	}
 	return 1;
 }
 
@@ -210,23 +188,23 @@ utf8_decode(const char *s, size_t *ip)
 		return (unsigned long long int)s[(*ip)++];
 	} else if ((s[*ip] & 0xE0) == 0xC0) {
 		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xC0U);
-		len = 1;
+		len = 2;
 		goto need_1;
 	} else if ((s[*ip] & 0xF0) == 0xE0) {
 		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xE0U);
-		len = 2;
+		len = 3;
 		goto need_2;
 	} else if ((s[*ip] & 0xF8) == 0xF0) {
 		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xF0U);
-		len = 3;
+		len = 4;
 		goto need_3;
 	} else if ((s[*ip] & 0xFC) == 0xF8) {
 		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xF8U);
-		len = 4;
+		len = 5;
 		goto need_4;
 	} else if ((s[*ip] & 0xFE) == 0xFC) {
 		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xFCU);
-		len = 5;
+		len = 6;
 		goto need_5;
 	}
 
@@ -258,17 +236,17 @@ need_1:
 	/* Let's ignore the 0x10FFFF upper bound. */
 
 	if (cp < 1ULL << (7 + 0 * 6))
-		return len > 1 ? 0ULL : cp;
+		return 0;
 	if (cp < 1ULL << (5 + 1 * 6))
-		return len > 1 ? 0ULL : cp;
+		return len > 2 ? 0ULL : cp;
 	if (cp < 1ULL << (4 + 2 * 6))
-		return len > 1 ? 0ULL : cp;
+		return len > 3 ? 0ULL : cp;
 	if (cp < 1ULL << (3 + 3 * 6))
-		return len > 1 ? 0ULL : cp;
+		return len > 4 ? 0ULL : cp;
 	if (cp < 1ULL << (2 + 4 * 6))
-		return len > 1 ? 0ULL : cp;
+		return len > 5 ? 0ULL : cp;
 	if (cp < 1ULL << (1 + 5 * 6))
-		return len > 1 ? 0ULL : cp;
+		return len > 6 ? 0ULL : cp;
 
 	return 0;
 }
@@ -352,7 +330,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 						}
 					}
 					input->mouseevent.button = (enum libterminput_button)nums[0];
-				} else if (!nnums & !(ctx->flags & LIBTERMINPUT_DECSET_1005)) { /* TODO test */
+				} else if (!nnums & !(ctx->flags & LIBTERMINPUT_DECSET_1005)) {
 					/* Parsing output for legacy mouse tracking output. */
 					ctx->mouse_tracking = 0;
 					nums = numsbuf;
@@ -365,27 +343,17 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					if (ctx->stored_head == ctx->stored_tail)
 						ctx->stored_head = ctx->stored_tail = 0;
 					goto decimal_mouse_tracking_set_press;
-				} else if (!nnums) { /* TODO test */
+				} else if (!nnums) {
 					/* Parsing for semi-legacy \e[?1000;1005h output. */
 					ctx->mouse_tracking = 0;
 					nums = numsbuf;
 					pos = ctx->stored_tail;
-					nums[0] = utf8_decode(ctx->stored, &ctx->stored_tail);
-					if (nums[0] <= 32) {
+					if ((nums[0] = utf8_decode(ctx->stored, &ctx->stored_tail)) < 32 ||
+					    (nums[1] = utf8_decode(ctx->stored, &ctx->stored_tail)) < 32 ||
+					    (nums[2] = utf8_decode(ctx->stored, &ctx->stored_tail)) < 32) {
 						ctx->stored_tail = pos;
-						goto suppress;
-					}
-					pos = ctx->stored_tail;
-					nums[1] = utf8_decode(ctx->stored, &ctx->stored_tail);
-					if (nums[1] <= 32) {
-						ctx->stored_tail = pos;
-						goto suppress;
-					}
-					pos = ctx->stored_tail;
-					nums[2] = utf8_decode(ctx->stored, &ctx->stored_tail);
-					if (nums[2] <= 32) {
-						ctx->stored_tail = pos;
-						goto suppress;
+						input->keypress.key = LIBTERMINPUT_MACRO;
+						return;
 					}
 					nums[0] = nums[0] - 32ULL;
 					nums[1] = nums[1] - 32ULL;
@@ -838,49 +806,42 @@ again:
 		} else if (ctx->key[0] == '[' && ctx->key[1] == '<' && p == &ctx->key[2]) { /* TODO test */
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M)) { /* TODO test */
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M)) {
 			/* complete */
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_DECSET_1005)) { /* TODO test */
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_DECSET_1005)) {
 			ctx->mouse_tracking = 1;
 			if (ctx->stored_head == ctx->stored_tail) {
 				input->type = LIBTERMINPUT_NONE;
 				return 1;
 			}
-			n = 0;
-			r = check_utf8_char(&ctx->stored[ctx->stored_tail + n], &m, ctx->stored_head - (ctx->stored_tail + n));
+			n = ctx->stored_tail;
+			r = check_utf8_char(&ctx->stored[n], &m, ctx->stored_head - n);
+			if (r <= 0)
+				goto fallback_to_none_or_macro;
 			n += m;
-			if (!r) {
-				input->type = LIBTERMINPUT_NONE;
-				return 1;
-			} else if (r < 0) {
+			r = check_utf8_char(&ctx->stored[n], &m, ctx->stored_head - n);
+			if (r <= 0)
+				goto fallback_to_none_or_macro;
+			n += m;
+			r = check_utf8_char(&ctx->stored[n], &m, ctx->stored_head - n);
+			if (r <= 0) {
+			fallback_to_none_or_macro:
+				if (!r) {
+					input->type = LIBTERMINPUT_NONE;
+					return 1;
+				}
 				ctx->mouse_tracking = 0;
-				input->type = LIBTERMINPUT_NONE;
-				ctx->stored_tail += n;
+				input->type = LIBTERMINPUT_KEYPRESS;
+				input->keypress.key = LIBTERMINPUT_MACRO;
+				input->keypress.mods = ret.mods;
+				input->keypress.times = 1;
+				if (ctx->meta > 1)
+					input->keypress.mods |= LIBTERMINPUT_META;
+				ctx->meta = 0;
+				ctx->key[0] = '\0';
 				return 1;
 			}
-			r = check_utf8_char(&ctx->stored[ctx->stored_tail + n], &m, ctx->stored_head - (ctx->stored_tail + n));
-			n += m;
-			if (!r) {
-				input->type = LIBTERMINPUT_NONE;
-				return 1;
-			} else if (r < 0) {
-				ctx->mouse_tracking = 0;
-				input->type = LIBTERMINPUT_NONE;
-				ctx->stored_tail += n;
-				return 1;
-			}
-			r = check_utf8_char(&ctx->stored[ctx->stored_tail + n], &m, ctx->stored_head - (ctx->stored_tail + n));
-			n += m;
-			if (!r) {
-				input->type = LIBTERMINPUT_NONE;
-				return 1;
-			} else if (r < 0) {
-				ctx->mouse_tracking = 0;
-				input->type = LIBTERMINPUT_NONE;
-				ctx->stored_tail += n;
-				return 1;
-			}
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && ctx->stored_head - ctx->stored_tail < 3) { /* TODO test */
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && ctx->stored_head - ctx->stored_tail < 3) {
 			ctx->mouse_tracking = 3;
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
