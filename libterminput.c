@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h>
 
 
 struct input {
@@ -330,7 +331,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'M':
 				if (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M) {
 					input->keypress.key = LIBTERMINPUT_MACRO;
-				} else if (nnums >= 3) { /* TODO test */
+				} else if (nnums >= 3) {
 					/* Parsing for \e[?1000;1015h output. */
 					nums[0] -= 32ULL;
 				decimal_mouse_tracking_set_press:
@@ -338,15 +339,17 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				decimal_mouse_tracking:
 					input->mouseevent.type = LIBTERMINPUT_MOUSEEVENT;
 					input->mouseevent.x = (size_t)nums[1] + (size_t)!nums[1];
-					input->mouseevent.y = (size_t)nums[2] + (size_t)!nums[3];
+					input->mouseevent.y = (size_t)nums[2] + (size_t)!nums[2];
 					input->mouseevent.mods = (enum libterminput_mod)((nums[0] >> 2) & 7ULL);
 					if (nums[0] & 32)
 						input->mouseevent.event = LIBTERMINPUT_MOTION;
 					nums[0] = (nums[0] & 3ULL) | ((nums[0] >> 4) & ~3ULL);
 					if (nums[0] < 4) {
 						nums[0] = (nums[0] + 1) & 3;
-						if (!nums[0] && input->mouseevent.event == LIBTERMINPUT_PRESS)
+						if (!nums[0] && input->mouseevent.event == LIBTERMINPUT_PRESS) {
 							input->mouseevent.event = LIBTERMINPUT_RELEASE;
+							nums[0] = 1;
+						}
 					}
 					input->mouseevent.button = (enum libterminput_button)nums[0];
 				} else if (!nnums & !(ctx->flags & LIBTERMINPUT_DECSET_1005)) { /* TODO test */
@@ -579,7 +582,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'D': input->keypress.key = LIBTERMINPUT_F4; break;
 			case 'E': input->keypress.key = LIBTERMINPUT_F5; break;
 			default:
-				if (ctx->key[1] == '<' && (ctx->key[2] == 'M' || ctx->key[2] == 'm') && nnums >= 3) { /* TODO test */
+				if (ctx->key[1] == '<' && (ctx->key[2] == 'M' || ctx->key[2] == 'm') && nnums >= 3) {
 					/* Parsing for \e[?1003;1006h output. */
 					input->mouseevent.event = LIBTERMINPUT_PRESS;
 					if (ctx->key[2] == 'm')
