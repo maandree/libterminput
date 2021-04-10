@@ -286,6 +286,26 @@ main(void)
 			TEST(input.keypress.mods == (MODS));\
 			TEST(input.keypress.times == times__);\
 		}\
+		if (buffer[0] && buffer[1]) {\
+			size_t i__;\
+			for (i__ = 0; buffer[i__ + 1]; i__++) {\
+				TEST(write(fds[1], &buffer[i__], 1) == 1);\
+				TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
+				TEST(input.type == LIBTERMINPUT_NONE);\
+			}\
+			TEST(write(fds[1], &buffer[i__], 1) == 1);\
+			TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
+			TEST(input.keypress.key == (KEY));\
+			TEST(input.keypress.mods == (MODS));\
+			TEST(input.keypress.times == (TIMES));\
+			for (times__ = (TIMES) - 1; times__; times__--) {\
+				TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
+				TEST(input.type == LIBTERMINPUT_KEYPRESS);\
+				TEST(input.keypress.key == (KEY));\
+				TEST(input.keypress.mods == (MODS));\
+				TEST(input.keypress.times == times__);\
+			}\
+		}\
 	} while (0)
 
 #define KEYPRESS(A, B, KEY, MODS)\

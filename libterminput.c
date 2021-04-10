@@ -800,7 +800,7 @@ again:
 		p = stpcpy(&ctx->key[n], ret.symbol);
 		/* Check if sequence is complete */
 	continue_incomplete:
-		if (!isalpha(p[-1]) && p[-1] != '~' && p[-1] != '@' && p[-1] != '^' && p[-1] != '$') { /* TODO test */
+		if (!isalpha(p[-1]) && p[-1] != '~' && p[-1] != '@' && p[-1] != '^' && p[-1] != '$') {
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
 		} else if (ctx->key[0] == '[' && ctx->key[1] == '<' && p == &ctx->key[2]) {
