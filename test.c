@@ -128,7 +128,9 @@ main(void)
 
 #define TYPE(STR, T)\
 	do {\
-		TEST(write(fds[1], STR, strlen(STR)) == (ssize_t)strlen(STR));\
+		alarm(5);\
+		if ((STR) && *(const char *)(STR))\
+			TEST(write(fds[1], STR, strlen(STR)) == (ssize_t)strlen(STR));\
 		do {\
 			TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
 		} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));\
@@ -138,8 +140,10 @@ main(void)
 #define KEYPRESS_(STR1, STR2, STR3, STR4, KEY, MODS, TIMES)\
 	do {\
 		int times__ = (TIMES);\
+		alarm(5);\
 		stpcpy(stpcpy(stpcpy(stpcpy(buffer, STR1), STR2), STR3), STR4);\
-		TEST(write(fds[1], buffer, strlen(buffer)) == (ssize_t)strlen(buffer));\
+		if (*buffer)\
+			TEST(write(fds[1], buffer, strlen(buffer)) == (ssize_t)strlen(buffer));\
 		for (; times__; times__--) {\
 			do {\
 				TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
@@ -229,11 +233,34 @@ main(void)
 
 	TYPE("\033[201~", LIBTERMINPUT_BRACKETED_PASTE_END);
 	TYPE("x", LIBTERMINPUT_KEYPRESS);
-#ifdef TODO
 	TYPE("\033[200~", LIBTERMINPUT_BRACKETED_PASTE_START);
-	TYPE("x", LIBTERMINPUT_TEXT);
-#endif
+	TYPE("x\033[201~", LIBTERMINPUT_TEXT);
+	TEST(input.text.nbytes == strlen("x"));
+	TEST(!memcmp(input.text.bytes, "x", strlen("x")));
+	TYPE(NULL, LIBTERMINPUT_BRACKETED_PASTE_END);
+	TYPE("\033[200~x", LIBTERMINPUT_BRACKETED_PASTE_START);
+	TYPE(NULL, LIBTERMINPUT_TEXT);
+	TEST(input.text.nbytes == strlen("x"));
+	TEST(!memcmp(input.text.bytes, "x", strlen("x")));
+	TYPE("\033[201x~x\033[201~x", LIBTERMINPUT_TEXT);
+	TEST(input.text.nbytes == strlen("\033[201x~x"));
+	TEST(!memcmp(input.text.bytes, "\033[201x~x", strlen("\033[201x~x")));
+	TYPE(NULL, LIBTERMINPUT_BRACKETED_PASTE_END);
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TYPE("\033[200~", LIBTERMINPUT_BRACKETED_PASTE_START);
 	TYPE("\033[201~", LIBTERMINPUT_BRACKETED_PASTE_END);
+	TYPE("\033[200~", LIBTERMINPUT_BRACKETED_PASTE_START);
+	TYPE("\033[201",  LIBTERMINPUT_NONE);
+	TYPE("x\033[20",  LIBTERMINPUT_TEXT);
+	TEST(input.text.nbytes == strlen("\033[201x"));
+	TEST(!memcmp(input.text.bytes, "\033[201x", strlen("\033[201x")));
+	TYPE("1",  LIBTERMINPUT_NONE);
+	TYPE("~",  LIBTERMINPUT_BRACKETED_PASTE_END);
+	TYPE("\033[200~\033[201~", LIBTERMINPUT_BRACKETED_PASTE_START);
+	TYPE(NULL, LIBTERMINPUT_BRACKETED_PASTE_END);
+	TYPE("\033[200~\033[201", LIBTERMINPUT_BRACKETED_PASTE_START);
+	TYPE("~", LIBTERMINPUT_BRACKETED_PASTE_END);
+
 	TYPE("\033[200^", LIBTERMINPUT_NONE);
 	TYPE("\033[200$", LIBTERMINPUT_NONE);
 	TYPE("\033[200@", LIBTERMINPUT_NONE);

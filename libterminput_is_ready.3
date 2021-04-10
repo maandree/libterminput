@@ -19,7 +19,11 @@ function check if a call to the
 .BR libterminput_read (3)
 function will skip reading from the file
 descriptor passed to it because it already
-has read data buffered.
+has read data buffered. However, if there
+is buffered data but the library knows it
+it not enough to return something they,
+it will also return that there is nothing
+buffered.
 
 .SH RETURN VALUE
 The

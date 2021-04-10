@@ -656,40 +656,82 @@ read_bracketed_paste(int fd, union libterminput_input *input, struct libterminpu
 	 * would stop the paste at the ~ in ESC [201~, send ~ as normal, and
 	 * then continue the brackated paste mode. */
 
-	if (ctx->stored_head - ctx->stored_tail) { /* TODO test */
-		for (n = ctx->stored_tail; n + 6 < ctx->stored_head; n++) {
-			if (ctx->stored[n + 0] == '\033' && ctx->stored[n + 1] == '[' && ctx->stored[n + 2] == '2' &&
-			    ctx->stored[n + 3] == '0'    && ctx->stored[n + 4] == '0' && ctx->stored[n + 5] == '~')
-				break;
-		}
-		if (n == ctx->stored_tail && ctx->stored_head - ctx->stored_tail >= 6) {
-			ctx->stored_tail += 6;
-			if (ctx->stored_tail == ctx->stored_head)
-				ctx->stored_tail = ctx->stored_head = 0;
-			ctx->bracketed_paste = 0;
-			input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
-			return 0;
+	if (ctx->stored_head - ctx->stored_tail) {
+		ctx->paused = 0;
+		n = ctx->stored_head - ctx->stored_tail;
+		if (!strncmp(&ctx->stored[ctx->stored_tail], "\033[201~", n < 6 ? n : 6)) {
+			if (n >= 6) {
+				ctx->stored_tail += 6;
+				if (ctx->stored_tail == ctx->stored_head)
+					ctx->stored_tail = ctx->stored_head = 0;
+				ctx->bracketed_paste = 0;
+				input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
+				return 1;
+			}
+			input->text.nbytes = ctx->stored_head - ctx->stored_tail;
+			memcpy(input->text.bytes, &ctx->stored[ctx->stored_tail], input->text.nbytes);
+			r = read(fd, &input->text.bytes[input->text.nbytes], sizeof(input->text.bytes) - input->text.nbytes);
+			if (r <= 0)
+				return (int)r;
+			input->text.nbytes += (size_t)r;
+			ctx->stored_head = ctx->stored_tail = 0;
+			goto normal;
 		}
 		input->text.nbytes = ctx->stored_head - ctx->stored_tail;
-		input->text.type = LIBTERMINPUT_TEXT;
-		memcpy(input->text.bytes, &ctx->stored[ctx->stored_tail], n - ctx->stored_tail);
-		ctx->stored_tail = n;
-		if (ctx->stored_tail == ctx->stored_head)
-			ctx->stored_tail = ctx->stored_head = 0;
-		return 0;
+		memcpy(input->text.bytes, &ctx->stored[ctx->stored_tail], input->text.nbytes);
+		ctx->stored_head = ctx->stored_tail = 0;
+		goto normal;
 	}
 
 	r = read(fd, input->text.bytes, sizeof(input->text.bytes));
 	if (r <= 0)
 		return (int)r;
-
 	input->text.nbytes = (size_t)r;
-	for (n = 0; n + 6 < input->text.nbytes; n++) {
+
+normal:
+	for (n = 0; n + 5 < input->text.nbytes; n++) {
 		if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2' &&
-		    input->text.bytes[n + 3] == '0'    && input->text.bytes[n + 4] == '0' && input->text.bytes[n + 5] == '~')
+		    input->text.bytes[n + 3] == '0'    && input->text.bytes[n + 4] == '1' && input->text.bytes[n + 5] == '~')
 			break;
 	}
-	if (!n && input->text.nbytes >= 6) {
+	do {
+		if (n + 4 < input->text.nbytes) {
+			if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2' &&
+			    input->text.bytes[n + 3] == '0'    && input->text.bytes[n + 4] == '1')
+				break;
+			n += 1;
+		}
+		if (n + 3 < input->text.nbytes) {
+			if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2' &&
+			    input->text.bytes[n + 3] == '0')
+				break;
+			n += 1;
+		}
+		if (n + 2 < input->text.nbytes) {
+			if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2')
+				break;
+			n += 1;
+		}
+		if (n + 1 < input->text.nbytes) {
+			if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[')
+				break;
+			n += 1;
+		}
+		if (n + 0 < input->text.nbytes) {
+			if (input->text.bytes[n + 0] == '\033')
+				break;
+			n += 1;
+		}
+	} while (0);
+	if (!n) {
+		if (input->text.nbytes < 6) {
+			input->text.type = LIBTERMINPUT_NONE;
+			memcpy(ctx->stored, input->text.bytes, input->text.nbytes);
+			ctx->stored_tail = 0;
+			ctx->stored_head = input->text.nbytes;
+			ctx->paused = 1;
+			return 1;
+		}
 		ctx->stored_tail = 0;
 		ctx->stored_head = input->text.nbytes - 6;
 		memcpy(ctx->stored, &input->text.bytes[6], ctx->stored_head);
@@ -697,14 +739,14 @@ read_bracketed_paste(int fd, union libterminput_input *input, struct libterminpu
 			ctx->stored_tail = ctx->stored_head = 0;
 		ctx->bracketed_paste = 0;
 		input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
-		return 0;
+		return 1;
 	}
-	/* TODO test */
 	ctx->stored_tail = 0;
 	ctx->stored_head = input->text.nbytes - n;
+	memcpy(ctx->stored, &input->text.bytes[n], ctx->stored_head);
 	input->text.nbytes = n;
 	input->text.type = LIBTERMINPUT_TEXT;
-	return 0;
+	return 1;
 }
 
 

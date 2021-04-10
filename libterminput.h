@@ -172,12 +172,13 @@ struct libterminput_state {
 	int inited; /* whether the input in initialised, not this struct */
 	enum libterminput_mod mods;
 	enum libterminput_flags flags;
-	size_t stored_head;
-	size_t stored_tail;
 	char bracketed_paste;
 	char mouse_tracking;
 	char meta;
 	char n;
+	size_t stored_head;
+	size_t stored_tail;
+	char paused;
 	char npartial;
 	char partial[7];
 	char key[44];
@@ -198,7 +199,7 @@ int libterminput_read(int fd, union libterminput_input *input, struct libterminp
 inline int
 libterminput_is_ready(union libterminput_input *input, struct libterminput_state *ctx)
 {
-	if (!ctx->inited)
+	if (!ctx->inited || ctx->paused)
 		return 0;
 	if (input->type == LIBTERMINPUT_KEYPRESS && input->keypress.times > 1)
 		return 1;
