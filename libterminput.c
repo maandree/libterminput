@@ -333,7 +333,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'M':
 				if (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M) {
 					input->keypress.key = LIBTERMINPUT_MACRO;
-				} else if (nnums >= 3) {
+				} else if (nnums >= 3) { /* TODO test */
 					/* Parsing for \e[?1000;1015h output. */
 					nums[0] -= 32ULL;
 				decimal_mouse_tracking_set_press:
@@ -352,7 +352,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 							input->mouseevent.event = LIBTERMINPUT_RELEASE;
 					}
 					input->mouseevent.button = (enum libterminput_button)nums[0];
-				} else if (!nnums & !(ctx->flags & LIBTERMINPUT_DECSET_1005)) {
+				} else if (!nnums & !(ctx->flags & LIBTERMINPUT_DECSET_1005)) { /* TODO test */
 					/* Parsing output for legacy mouse tracking output. */
 					ctx->mouse_tracking = 0;
 					nums = numsbuf;
@@ -365,7 +365,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					if (ctx->stored_head == ctx->stored_tail)
 						ctx->stored_head = ctx->stored_tail = 0;
 					goto decimal_mouse_tracking_set_press;
-				} else if (!nnums) {
+				} else if (!nnums) { /* TODO test */
 					/* Parsing for semi-legacy \e[?1000;1005h output. */
 					ctx->mouse_tracking = 0;
 					nums = numsbuf;
@@ -406,7 +406,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				input->keypress.key = LIBTERMINPUT_F2;
 				break;
 			case 'R':
-				if ((ctx->flags & LIBTERMINPUT_AWAITING_CURSOR_POSITION) && nnums == 2) {
+				if ((ctx->flags & LIBTERMINPUT_AWAITING_CURSOR_POSITION) && nnums >= 2) {
 					input->position.type = LIBTERMINPUT_CURSOR_POSITION;
 					input->position.y = (size_t)nums[0] + (size_t)!nums[0];
 					input->position.x = (size_t)nums[1] + (size_t)!nums[1];
@@ -417,7 +417,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'S':
 				input->keypress.key = LIBTERMINPUT_F4;
 				break;
-			case 'T':
+			case 'T': /* TODO test */
 				/* Parsing output for legacy mouse highlight tracking output. (\e[?1001h) */
 				ctx->mouse_tracking = 0;
 				nums = numsbuf;
@@ -473,15 +473,15 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				input->keypress.mods |= LIBTERMINPUT_SHIFT;
 				break;
 			case 'n':
-				if (nnums == 1 && nums[0] == '0') {
+				if (nnums == 1 && nums[0] == 0) {
 					input->type = LIBTERMINPUT_TERMINAL_IS_OK;
-				} else if (nnums == 1 && nums[0] == '3') {
+				} else if (nnums == 1 && nums[0] == 3) {
 					input->type = LIBTERMINPUT_TERMINAL_IS_NOT_OK;
 				} else {
 					goto suppress;
 				}
 				break;
-			case 't':
+			case 't': /* TODO test */
 				/* Parsing output for legacy mouse highlight tracking output (\e[?1001h). */
 				ctx->mouse_tracking = 0;
 				nums = numsbuf;
@@ -582,7 +582,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'D': input->keypress.key = LIBTERMINPUT_F4; break;
 			case 'E': input->keypress.key = LIBTERMINPUT_F5; break;
 			default:
-				if (ctx->key[1] == '<' && (ctx->key[2] == 'M' || ctx->key[2] == 'm') && nnums >= 3) {
+				if (ctx->key[1] == '<' && (ctx->key[2] == 'M' || ctx->key[2] == 'm') && nnums >= 3) { /* TODO test */
 					/* Parsing for \e[?1003;1006h output. */
 					input->mouseevent.event = LIBTERMINPUT_PRESS;
 					if (ctx->key[2] == 'm')
@@ -604,8 +604,10 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 		case 'B': input->keypress.key = LIBTERMINPUT_DOWN;            break;
 		case 'C': input->keypress.key = LIBTERMINPUT_RIGHT;           break;
 		case 'D': input->keypress.key = LIBTERMINPUT_LEFT;            break;
-		case 'H': input->keypress.key = LIBTERMINPUT_HOME;            break;
+		case 'E': input->keypress.key = LIBTERMINPUT_BEGIN;           break; /* not attested */
 		case 'F': input->keypress.key = LIBTERMINPUT_END;             break;
+		case 'G': input->keypress.key = LIBTERMINPUT_BEGIN;           break; /* not attested */
+		case 'H': input->keypress.key = LIBTERMINPUT_HOME;            break;
 		case 'P': input->keypress.key = LIBTERMINPUT_F1;              break;
 		case 'Q': input->keypress.key = LIBTERMINPUT_F2;              break;
 		case 'R': input->keypress.key = LIBTERMINPUT_F3;              break;
@@ -654,7 +656,7 @@ read_bracketed_paste(int fd, union libterminput_input *input, struct libterminpu
 	 * would stop the paste at the ~ in ESC [201~, send ~ as normal, and
 	 * then continue the brackated paste mode. */
 
-	if (ctx->stored_head - ctx->stored_tail) {
+	if (ctx->stored_head - ctx->stored_tail) { /* TODO test */
 		for (n = ctx->stored_tail; n + 6 < ctx->stored_head; n++) {
 			if (ctx->stored[n + 0] == '\033' && ctx->stored[n + 1] == '[' && ctx->stored[n + 2] == '2' &&
 			    ctx->stored[n + 3] == '0'    && ctx->stored[n + 4] == '0' && ctx->stored[n + 5] == '~')
@@ -664,6 +666,7 @@ read_bracketed_paste(int fd, union libterminput_input *input, struct libterminpu
 			ctx->stored_tail += 6;
 			if (ctx->stored_tail == ctx->stored_head)
 				ctx->stored_tail = ctx->stored_head = 0;
+			ctx->bracketed_paste = 0;
 			input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
 			return 0;
 		}
@@ -692,9 +695,11 @@ read_bracketed_paste(int fd, union libterminput_input *input, struct libterminpu
 		memcpy(ctx->stored, &input->text.bytes[6], ctx->stored_head);
 		if (ctx->stored_tail == ctx->stored_head)
 			ctx->stored_tail = ctx->stored_head = 0;
+		ctx->bracketed_paste = 0;
 		input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
 		return 0;
 	}
+	/* TODO test */
 	ctx->stored_tail = 0;
 	ctx->stored_head = input->text.nbytes - n;
 	input->text.nbytes = n;
@@ -753,7 +758,7 @@ libterminput_read(int fd, union libterminput_input *input, struct libterminput_s
 	}
 
 again:
-	if (!*ret.symbol) {
+	if (!*ret.symbol) { /* TODO test */
 		/* Incomplete input */
 		if (ctx->meta < 3) {
 			/* Up to two Meta/ESC, wait until a third or something else is read */
@@ -785,15 +790,15 @@ again:
 		p = stpcpy(&ctx->key[n], ret.symbol);
 		/* Check if sequence is complete */
 	continue_incomplete:
-		if (!isalpha(p[-1]) && p[-1] != '~') {
+		if (!isalpha(p[-1]) && p[-1] != '~' && p[-1] != '@' && p[-1] != '^' && p[-1] != '$') { /* TODO test */
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
-		} else if (ctx->key[0] == '[' && ctx->key[1] == '<' && p == &ctx->key[2]) {
+		} else if (ctx->key[0] == '[' && ctx->key[1] == '<' && p == &ctx->key[2]) { /* TODO test */
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M)) {
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M)) { /* TODO test */
 			/* complete */
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_DECSET_1005)) {
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_DECSET_1005)) { /* TODO test */
 			ctx->mouse_tracking = 1;
 			if (ctx->stored_head == ctx->stored_tail) {
 				input->type = LIBTERMINPUT_NONE;
@@ -833,15 +838,15 @@ again:
 				ctx->stored_tail += n;
 				return 1;
 			}
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && ctx->stored_head - ctx->stored_tail < 3) {
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && ctx->stored_head - ctx->stored_tail < 3) { /* TODO test */
 			ctx->mouse_tracking = 3;
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 't' && ctx->stored_head - ctx->stored_tail < 2) {
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 't' && ctx->stored_head - ctx->stored_tail < 2) { /* TODO test */
 			ctx->mouse_tracking = 2;
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 'T' && ctx->stored_head - ctx->stored_tail < 6) {
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'T' && ctx->stored_head - ctx->stored_tail < 6) { /* TODO test */
 			ctx->mouse_tracking = 6;
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
@@ -855,7 +860,7 @@ again:
 		/* ESC [ or ESC 0 is used as the beginning of most special keys */
 		strcpy(ctx->key, ret.symbol);
 		input->type = LIBTERMINPUT_NONE;
-	} else {
+	} else { /* TODO test */
 		/* Character input and single-byte special keys */
 		input->type = LIBTERMINPUT_KEYPRESS;
 		input->keypress.mods = ret.mods;

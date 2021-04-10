@@ -24,10 +24,11 @@ HDR =\
 
 OBJ =\
 	interactive-test.o\
+	test.o\
 	$(LOBJ:.lo=.o)
 
 
-all: libterminput.a libterminput.$(LIBEXT) interactive-test
+all: libterminput.a libterminput.$(LIBEXT) interactive-test test
 $(OBJ): $(@:.o=.c) $(HDR)
 $(LOBJ): $(@:.lo=.c) $(HDR)
 
@@ -47,6 +48,12 @@ $(LOBJ): $(@:.lo=.c) $(HDR)
 
 interactive-test: interactive-test.o libterminput.a
 	$(CC) -o $@ interactive-test.o libterminput.a $(LDFLAGS)
+
+test: test.o libterminput.a
+	$(CC) -o $@ test.o libterminput.a $(LDFLAGS)
+
+check: test
+	./test
 
 install: libterminput.a libterminput.$(LIBEXT)
 	mkdir -p -- "$(DESTDIR)$(PREFIX)/lib"
@@ -75,9 +82,9 @@ uninstall:
 	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man7/libterminput.7"
 
 clean:
-	-rm -f -- *.o *.a *.lo *.so *.su *.dll *.dylib interactive-test
+	-rm -f -- *.o *.a *.lo *.so *.su *.dll *.dylib interactive-test test
 
 .SUFFIXES:
 .SUFFIXES: .a .o .lo .c .$(LIBEXT)
 
-.PHONY: all install uninstall clean
+.PHONY: all check install uninstall clean
