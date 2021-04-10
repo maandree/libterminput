@@ -126,6 +126,17 @@ main(void)
 		exit(1);\
 	} while (0)
 
+#define TYPE_MEM(STR, LEN, T)\
+	do {\
+		alarm(5);\
+		if (LEN)\
+			TEST(write(fds[1], STR, (LEN)) == (LEN));\
+		do {\
+			TEST(libterminput_read(fds[0], &input, &ctx) == 1);\
+		} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));\
+		TEST(input.type == (T));\
+	} while (0)
+
 #define TYPE(STR, T)\
 	do {\
 		alarm(5);\
@@ -210,6 +221,29 @@ main(void)
 		KEYNUM_("\033\033[", NUM, ";8", (KEY), (MODS) | LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);\
 	} while (0)
 
+#define KEYPRESS_SPECIAL_CHAR(CHAR, KEY)\
+	do {\
+		buffer[0] = (CHAR);\
+		buffer[1] = '\0';\
+		TYPE(buffer, LIBTERMINPUT_KEYPRESS);\
+		TEST(input.keypress.mods == 0);\
+		TEST(input.keypress.times == 1);\
+		TEST(input.keypress.key == (KEY));\
+		buffer[0] = '\033';\
+		buffer[1] = (CHAR);\
+		buffer[2] = '\0';\
+		TYPE(buffer, LIBTERMINPUT_KEYPRESS);\
+		TEST(input.keypress.mods == LIBTERMINPUT_META);\
+		TEST(input.keypress.times == 1);\
+		TEST(input.keypress.key == (KEY));\
+		buffer[0] = (char)((CHAR) | 0x80);\
+		buffer[1] = '\0';\
+		TYPE(buffer, LIBTERMINPUT_KEYPRESS);\
+		TEST(input.keypress.mods == LIBTERMINPUT_META);\
+		TEST(input.keypress.times == 1);\
+		TEST(input.keypress.key == (KEY));\
+	} while (0)
+
 	char buffer[512], numbuf[3 * sizeof(int) + 2];
 	struct libterminput_state ctx;
 	union libterminput_input input;
@@ -280,6 +314,160 @@ main(void)
 	TEST(input.position.y == 25);
 	TEST(input.position.x == 93);
 	libterminput_clear_flags(&ctx, LIBTERMINPUT_AWAITING_CURSOR_POSITION);
+
+	TYPE("\033", LIBTERMINPUT_NONE);
+	TYPE("\033", LIBTERMINPUT_NONE);
+	TYPE("\033", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_ESC);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 3);
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_ESC);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 2);
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_ESC);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+
+	TYPE("\033", LIBTERMINPUT_NONE);
+	TYPE("\033", LIBTERMINPUT_NONE);
+	TYPE("\033", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_ESC);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 3);
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_ESC);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 2);
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_ESC);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+
+	KEYPRESS_SPECIAL_CHAR('\x7F', LIBTERMINPUT_ERASE);
+	KEYPRESS_SPECIAL_CHAR('\b', LIBTERMINPUT_ERASE);
+	KEYPRESS_SPECIAL_CHAR('\t', LIBTERMINPUT_TAB);
+	KEYPRESS_SPECIAL_CHAR('\n', LIBTERMINPUT_ENTER);
+	libterminput_set_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
+	KEYPRESS_SPECIAL_CHAR('\033', LIBTERMINPUT_ESC);
+	libterminput_clear_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
+
+	TYPE("text", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == 't');
+	TEST(input.keypress.symbol[1] == '\0');
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == 'e');
+	TEST(input.keypress.symbol[1] == '\0');
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == 'x');
+	TEST(input.keypress.symbol[1] == '\0');
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == 't');
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("åäö", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "å"));
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "ä"));
+	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "ö"));
+
+	TYPE("\033z", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "z"));
+	TYPE("\033ö", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "ö"));
+
+	buffer[0] = '-';
+	buffer[0] |= 0x80;
+	buffer[1] = 0;
+	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "-"));
+
+	buffer[0] = 'Y';
+	buffer[0] -= '@';
+	buffer[1] = 0;
+	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_CTRL);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "Y"));
+
+	buffer[0] = '\033';
+	buffer[1] = 'Y';
+	buffer[1] -= '@';
+	buffer[2] = 0;
+	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_CTRL | LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "Y"));
+
+	buffer[0] = 'Y';
+	buffer[0] -= '@';
+	buffer[0] |= 0x80;
+	buffer[1] = 0;
+	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_CTRL | LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "Y"));
+
+	buffer[0] = '\033';
+	buffer[1] = 'Y';
+	buffer[1] -= '@';
+	buffer[1] |= 0x80;
+	buffer[2] = 0;
+	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_CTRL | LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, "Y"));
+
+	buffer[0] = 0;
+	TYPE_MEM(buffer, 1, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_CTRL);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, " "));
+
+	buffer[0] = '\033';
+	buffer[1] = 0;
+	TYPE_MEM(buffer, 2, LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_CTRL | LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(!strcmp(input.keypress.symbol, " "));
 
 	close(fds[1]);
 	TEST(libterminput_read(fds[0], &input, &ctx) == 0);

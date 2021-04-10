@@ -86,7 +86,7 @@ again:
 		input->mods = ctx->mods | LIBTERMINPUT_CTRL;
 		ctx->mods = 0;
 		return 1;
-	} else if ((c & 0xC0) == 0xC0) {
+	} else if ((c & 0xC0) == 0xC0 && c != 0xFF) {
 		/* Beginning of multibyte-character */
 		ctx->n = 0;
 		for (tc = c; tc & 0x80; tc <<= 1)
@@ -105,11 +105,8 @@ again:
 		/* 8th bit set to signify META */
 		c ^= 0x80;
 		ctx->mods |= LIBTERMINPUT_META;
-		if (c == 033)
-			goto single_byte;
 		goto again;
 	} else {
-	single_byte:
 		/* Single-byte-character */
 		input->symbol[0] = (char)c;
 		input->symbol[1] = '\0';
@@ -800,7 +797,7 @@ libterminput_read(int fd, union libterminput_input *input, struct libterminput_s
 	}
 
 again:
-	if (!*ret.symbol) { /* TODO test */
+	if (!*ret.symbol) {
 		/* Incomplete input */
 		if (ctx->meta < 3) {
 			/* Up to two Meta/ESC, wait until a third or something else is read */
@@ -811,7 +808,7 @@ again:
 		input->type = LIBTERMINPUT_KEYPRESS;
 		input->keypress.key = LIBTERMINPUT_ESC;
 		input->keypress.times = 3;
-		input->keypress.mods = ret.mods;
+		input->keypress.mods = 0;
 		input->keypress.symbol[0] = '\0';
 		ctx->meta -= 3;
 	} else if (*ctx->key) {
@@ -902,7 +899,7 @@ again:
 		/* ESC [ or ESC 0 is used as the beginning of most special keys */
 		strcpy(ctx->key, ret.symbol);
 		input->type = LIBTERMINPUT_NONE;
-	} else { /* TODO test */
+	} else {
 		/* Character input and single-byte special keys */
 		input->type = LIBTERMINPUT_KEYPRESS;
 		input->keypress.mods = ret.mods;
