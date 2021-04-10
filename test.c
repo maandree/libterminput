@@ -376,6 +376,20 @@ main(void)
 		TEST(input.mouseevent.y == (Y));\
 	} while (0)
 
+#define MOUSEHO(STR, SX, SY, EX, EY, MX, MY)\
+	do {\
+		TYPE(STR, LIBTERMINPUT_MOUSEEVENT);\
+		TEST(input.mouseevent.button == LIBTERMINPUT_BUTTON1);\
+		TEST(input.mouseevent.mods == 0);\
+		TEST(input.mouseevent.event == LIBTERMINPUT_HIGHLIGHT_OUTSIDE);\
+		TEST(input.mouseevent.start_x == (size_t)(SX));\
+		TEST(input.mouseevent.start_y == (size_t)(SY));\
+		TEST(input.mouseevent.end_x == (size_t)(EX));\
+		TEST(input.mouseevent.end_y == (size_t)(EY));\
+		TEST(input.mouseevent.x == (size_t)(MX));\
+		TEST(input.mouseevent.y == (size_t)(MY));\
+	} while (0)
+
 	char buffer[512], numbuf[3 * sizeof(int) + 2];
 	struct libterminput_state ctx;
 	union libterminput_input input;
@@ -604,6 +618,20 @@ main(void)
 	for (i = 0; mice[i].str; i++)
 		MOUSE(mice[i].str, mice[i].event, mice[i].button, mice[i].mods, mice[i].x, mice[i].y);
 
+	TYPE("\033[<0;1;2", LIBTERMINPUT_NONE);
+	MOUSE("m", LIBTERMINPUT_RELEASE, LIBTERMINPUT_BUTTON1, 0, 1, 2);
+	TYPE("\033[<", LIBTERMINPUT_NONE);
+	TYPE("0;1", LIBTERMINPUT_NONE);
+	TYPE(";2", LIBTERMINPUT_NONE);
+	MOUSE("m", LIBTERMINPUT_RELEASE, LIBTERMINPUT_BUTTON1, 0, 1, 2);
+
+	TYPE("\033[<0;1;2", LIBTERMINPUT_NONE);
+	MOUSE("M", LIBTERMINPUT_PRESS, LIBTERMINPUT_BUTTON1, 0, 1, 2);
+	TYPE("\033[<", LIBTERMINPUT_NONE);
+	TYPE("0;1", LIBTERMINPUT_NONE);
+	TYPE(";2", LIBTERMINPUT_NONE);
+	MOUSE("M", LIBTERMINPUT_PRESS, LIBTERMINPUT_BUTTON1, 0, 1, 2);
+
 	MOUSE("\033[M !#",          LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON1,  0, 1, 3);
 	MOUSE("\033[M!#!",          LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON2,  0, 3, 1);
 	MOUSE("\033[M\"#!",         LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON3,  0, 3, 1);
@@ -614,7 +642,8 @@ main(void)
 	MOUSE("\033[M\xac!#",       LIBTERMINPUT_PRESS,   LIBTERMINPUT_XBUTTON1, LIBTERMINPUT_SHIFT | LIBTERMINPUT_META, 1, 3);
 	MOUSE("\033[M\xb0!#",       LIBTERMINPUT_PRESS,   LIBTERMINPUT_XBUTTON1, LIBTERMINPUT_CTRL, 1, 3);
 	MOUSE("\033[M\xb1!#",       LIBTERMINPUT_PRESS,   LIBTERMINPUT_XBUTTON2, LIBTERMINPUT_CTRL, 1, 3);
-	MOUSE("\033[M   ",          LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON1,  0, 1, 1);
+	MOUSE("\033[M  #",          LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON1,  0, 1, 3);
+	MOUSE("\033[M # ",          LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON1,  0, 3, 1);
 
 	MOUSE("\033[M\xdf\xff\xff", LIBTERMINPUT_MOTION,  11, 7, 255 - 32, 255 - 32);
 	MOUSE("\033[M\x1f\x1f\x1f", LIBTERMINPUT_MOTION,  15, 7, 255, 255);
@@ -638,7 +667,8 @@ main(void)
 	MOUSE("\033[M\xc2\xac!#",   LIBTERMINPUT_PRESS,   LIBTERMINPUT_XBUTTON1, LIBTERMINPUT_SHIFT | LIBTERMINPUT_META, 1, 3);
 	MOUSE("\033[M\xc2\xb0!#",   LIBTERMINPUT_PRESS,   LIBTERMINPUT_XBUTTON1, LIBTERMINPUT_CTRL, 1, 3);
 	MOUSE("\033[M\xc2\xb1!#",   LIBTERMINPUT_PRESS,   LIBTERMINPUT_XBUTTON2, LIBTERMINPUT_CTRL, 1, 3);
-	MOUSE("\033[M   ",          LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON1,  0, 1, 1);
+	MOUSE("\033[M  #",          LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON1,  0, 1, 3);
+	MOUSE("\033[M # ",          LIBTERMINPUT_PRESS,   LIBTERMINPUT_BUTTON1,  0, 3, 1);
 
 	TYPE("\033[M  \x1f", LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_MACRO);
@@ -700,6 +730,50 @@ main(void)
 	MOUSE("\xa5",  LIBTERMINPUT_PRESS, LIBTERMINPUT_BUTTON1, 0, 361, 3333);
 
 	libterminput_clear_flags(&ctx, LIBTERMINPUT_DECSET_1005);
+
+	MOUSE("\033[t!#",       LIBTERMINPUT_HIGHLIGHT_INSIDE, LIBTERMINPUT_BUTTON1, 0, 1, 3);
+	MOUSE("\033[t#!",       LIBTERMINPUT_HIGHLIGHT_INSIDE, LIBTERMINPUT_BUTTON1, 0, 3, 1);
+	MOUSE("\033[t #",       LIBTERMINPUT_HIGHLIGHT_INSIDE, LIBTERMINPUT_BUTTON1, 0, 1, 3);
+	MOUSE("\033[t# ",       LIBTERMINPUT_HIGHLIGHT_INSIDE, LIBTERMINPUT_BUTTON1, 0, 3, 1);
+	MOUSE("\033[t\xff\xff", LIBTERMINPUT_HIGHLIGHT_INSIDE, LIBTERMINPUT_BUTTON1, 0, 255 - 32, 255 - 32);
+	MOUSE("\033[t\x1f\x1f", LIBTERMINPUT_HIGHLIGHT_INSIDE, LIBTERMINPUT_BUTTON1, 0, 255, 255);
+
+	TYPE("\033[t!", LIBTERMINPUT_NONE);
+	MOUSE("#",      LIBTERMINPUT_HIGHLIGHT_INSIDE, LIBTERMINPUT_BUTTON1, 0, 1, 3);
+	TYPE("\033[t",  LIBTERMINPUT_NONE);
+	MOUSE("#!",     LIBTERMINPUT_HIGHLIGHT_INSIDE, LIBTERMINPUT_BUTTON1, 0, 3, 1);
+
+	MOUSEHO("\033[Tabcdef", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	MOUSEHO("\033[T bcdef", 1, 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	MOUSEHO("\033[Ta cdef", 'a' - ' ', 1, 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	MOUSEHO("\033[Tab def", 'a' - ' ', 'b' - ' ', 1, 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	MOUSEHO("\033[Tabc ef", 'a' - ' ', 'b' - ' ', 'c' - ' ', 1, 'e' - ' ', 'f' - ' ');
+	MOUSEHO("\033[Tabcd f", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 1, 'f' - ' ');
+	MOUSEHO("\033[Tabcde ", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 1);
+	MOUSEHO("\033[T\xff\xff\xff\xff\xff\xff", 255 - 32, 255 - 32, 255 - 32, 255 - 32, 255 - 32, 255 - 32);
+	MOUSEHO("\033[T\x1f\x1f\x1f\x1f\x1f\x1f", 255, 255, 255, 255, 255, 255);
+
+	TYPE("\033[Tabcde", LIBTERMINPUT_NONE);
+	MOUSEHO("f", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	TYPE("\033[Tabcd", LIBTERMINPUT_NONE);
+	TYPE("e", LIBTERMINPUT_NONE);
+	MOUSEHO("f", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	TYPE("\033[Tabc", LIBTERMINPUT_NONE);
+	TYPE("d", LIBTERMINPUT_NONE);
+	TYPE("e", LIBTERMINPUT_NONE);
+	MOUSEHO("f", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	TYPE("\033[Tab", LIBTERMINPUT_NONE);
+	TYPE("cd", LIBTERMINPUT_NONE);
+	TYPE("e", LIBTERMINPUT_NONE);
+	MOUSEHO("f", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	TYPE("\033[Ta", LIBTERMINPUT_NONE);
+	TYPE("bcd", LIBTERMINPUT_NONE);
+	TYPE("e", LIBTERMINPUT_NONE);
+	MOUSEHO("f", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
+	TYPE("\033[T", LIBTERMINPUT_NONE);
+	TYPE("abcd", LIBTERMINPUT_NONE);
+	TYPE("e", LIBTERMINPUT_NONE);
+	MOUSEHO("f", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
 
 	close(fds[1]);
 	TEST(libterminput_read(fds[0], &input, &ctx) == 0);

@@ -385,7 +385,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 			case 'S':
 				input->keypress.key = LIBTERMINPUT_F4;
 				break;
-			case 'T': /* TODO test */
+			case 'T':
 				/* Parsing output for legacy mouse highlight tracking output. (\e[?1001h) */
 				ctx->mouse_tracking = 0;
 				nums = numsbuf;
@@ -407,12 +407,12 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				input->mouseevent.event = LIBTERMINPUT_HIGHLIGHT_OUTSIDE;
 				input->mouseevent.mods = 0;
 				input->mouseevent.button = LIBTERMINPUT_BUTTON1;
-				input->mouseevent.start_x = (size_t)nums[0];
-				input->mouseevent.start_y = (size_t)nums[1];
-				input->mouseevent.end_x = (size_t)nums[2];
-				input->mouseevent.end_y = (size_t)nums[3];
-				input->mouseevent.x = (size_t)nums[4];
-				input->mouseevent.y = (size_t)nums[5];
+				input->mouseevent.start_x = (size_t)nums[0] + (size_t)!nums[0];
+				input->mouseevent.start_y = (size_t)nums[1] + (size_t)!nums[1];
+				input->mouseevent.end_x = (size_t)nums[2] + (size_t)!nums[2];
+				input->mouseevent.end_y = (size_t)nums[3] + (size_t)!nums[3];
+				input->mouseevent.x = (size_t)nums[4] + (size_t)!nums[4];
+				input->mouseevent.y = (size_t)nums[5] + (size_t)!nums[5];
 				break;
 			case 'U': input->keypress.key = LIBTERMINPUT_NEXT;  break;
 			case 'V': input->keypress.key = LIBTERMINPUT_PRIOR; break;
@@ -449,7 +449,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					goto suppress;
 				}
 				break;
-			case 't': /* TODO test */
+			case 't':
 				/* Parsing output for legacy mouse highlight tracking output (\e[?1001h). */
 				ctx->mouse_tracking = 0;
 				nums = numsbuf;
@@ -463,8 +463,8 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				input->mouseevent.event = LIBTERMINPUT_HIGHLIGHT_INSIDE;
 				input->mouseevent.mods = 0;
 				input->mouseevent.button = LIBTERMINPUT_BUTTON1;
-				input->mouseevent.x = (size_t)nums[0];
-				input->mouseevent.y = (size_t)nums[1];
+				input->mouseevent.x = (size_t)nums[0] + (size_t)!nums[0];
+				input->mouseevent.y = (size_t)nums[1] + (size_t)!nums[1];
 				break;
 			case 'u':
 				if (nums[0] > 0x10FFFFULL) {
@@ -803,7 +803,7 @@ again:
 		if (!isalpha(p[-1]) && p[-1] != '~' && p[-1] != '@' && p[-1] != '^' && p[-1] != '$') { /* TODO test */
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
-		} else if (ctx->key[0] == '[' && ctx->key[1] == '<' && p == &ctx->key[2]) { /* TODO test */
+		} else if (ctx->key[0] == '[' && ctx->key[1] == '<' && p == &ctx->key[2]) {
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
 		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M)) {
@@ -845,11 +845,11 @@ again:
 			ctx->mouse_tracking = 3;
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 't' && ctx->stored_head - ctx->stored_tail < 2) { /* TODO test */
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 't' && ctx->stored_head - ctx->stored_tail < 2) {
 			ctx->mouse_tracking = 2;
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
-		} else if (ctx->key[0] == '[' && ctx->key[1] == 'T' && ctx->stored_head - ctx->stored_tail < 6) { /* TODO test */
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'T' && ctx->stored_head - ctx->stored_tail < 6) {
 			ctx->mouse_tracking = 6;
 			input->type = LIBTERMINPUT_NONE;
 			return 1;
