@@ -870,6 +870,114 @@ main(void)
 	TYPE("e", LIBTERMINPUT_NONE);
 	MOUSEHO("f", 'a' - ' ', 'b' - ' ', 'c' - ' ', 'd' - ' ', 'e' - ' ', 'f' - ' ');
 
+	TYPE("\033[0u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\0');
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("\033[0;1u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\0');
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("\033[0;2u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_SHIFT);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\0');
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("\033[1;3u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\x01');
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("\033[1;4u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_SHIFT | LIBTERMINPUT_META);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\x01');
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("\033[60;5u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_CTRL);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == 60);
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("\033[128;6u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_SHIFT | LIBTERMINPUT_CTRL);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\xC2');
+	TEST(input.keypress.symbol[1] == '\x80');
+	TEST(input.keypress.symbol[2] == '\0');
+
+	TYPE("\033[1114110;7u", LIBTERMINPUT_KEYPRESS); /* 0x10FFFE */
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\xF4');
+	TEST(input.keypress.symbol[1] == '\x8F');
+	TEST(input.keypress.symbol[2] == '\xBF');
+	TEST(input.keypress.symbol[3] == '\xBE');
+	TEST(input.keypress.symbol[4] == '\0');
+
+	TYPE("\033[1114112;7u", LIBTERMINPUT_NONE); /* 0x110000 */
+	TYPE("\033[55296;7u", LIBTERMINPUT_NONE); /* 0xD800 */
+	TYPE("\033[55552;7u", LIBTERMINPUT_NONE); /* 0xD900 */
+	TYPE("\033[57088;7u", LIBTERMINPUT_NONE); /* 0xDF00 */
+	TYPE("\033[57343;7u", LIBTERMINPUT_NONE); /* 0xDFFF */
+	TYPE("\033[57344;7u", LIBTERMINPUT_KEYPRESS); /* 0xE000 */
+	TYPE("\033[55295;7u", LIBTERMINPUT_KEYPRESS); /* 0xD7FF */
+
+	TYPE("\033[1114111;7u", LIBTERMINPUT_KEYPRESS); /* 0x10FFFF */
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\xF4');
+	TEST(input.keypress.symbol[1] == '\x8F');
+	TEST(input.keypress.symbol[2] == '\xBF');
+	TEST(input.keypress.symbol[3] == '\xBF');
+	TEST(input.keypress.symbol[4] == '\0');
+
+	TYPE("\033[10000;8u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\xE2');
+	TEST(input.keypress.symbol[1] == '\x9C');
+	TEST(input.keypress.symbol[2] == '\x90');
+	TEST(input.keypress.symbol[3] == '\0');
+
+	TYPE("\033[32;2u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == LIBTERMINPUT_SHIFT);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == ' ');
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("\033[10;9u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 8);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\n');
+	TEST(input.keypress.symbol[1] == '\0');
+
+	TYPE("\033[10;9u", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.mods == 8);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.symbol[0] == '\n');
+	TEST(input.keypress.symbol[1] == '\0');
+
 	close(fds[1]);
 	TEST(libterminput_read(fds[0], &input, &ctx) == 0);
 	close(fds[0]);

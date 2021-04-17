@@ -139,7 +139,7 @@ encode_utf8(unsigned long long int codepoint, char buffer[7])
 	len += 1;
 	buffer[len] = '\0';
 	for (; --len; codepoint >>= 6)
-		buffer[len] = (char)(codepoint & 0x3FULL);
+		buffer[len] = (char)((codepoint & 0x3FULL) | 0x80ULL);
 	buffer[0] |= (char)codepoint;
 }
 
@@ -467,7 +467,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 				input->mouseevent.y = (size_t)nums[1] + (size_t)!nums[1];
 				break;
 			case 'u':
-				if (nums[0] > 0x10FFFFULL || (nums[0] & 0xD800) == 0xD800) {
+				if (nums[0] > 0x10FFFFULL || (nums[0] & 0xFFF800ULL) == 0xD800ULL) {
 					input->type = LIBTERMINPUT_NONE;
 					break;
 				}
