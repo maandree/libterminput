@@ -44,7 +44,7 @@ $(LOBJ): $(@:.lo=.c) $(HDR)
 	$(AR) -s $@
 
 .lo.$(LIBEXT):
-	$(CC) $(LIBFLAGS) $(LDFLAGS_METHODS) -o $@ $< $(LDFLAGS)
+	$(CC) $(LIBFLAGS) -o $@ $< $(LDFLAGS)
 
 interactive-test: interactive-test.o libterminput.a
 	$(CC) -o $@ interactive-test.o libterminput.a $(LDFLAGS)
