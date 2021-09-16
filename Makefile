@@ -29,8 +29,8 @@ OBJ =\
 
 
 all: libterminput.a libterminput.$(LIBEXT) interactive-test test
-$(OBJ): $(@:.o=.c) $(HDR)
-$(LOBJ): $(@:.lo=.c) $(HDR)
+$(OBJ): $(HDR)
+$(LOBJ): $(HDR)
 
 .c.o:
 	$(CC) -c -o $@ $< $(CFLAGS) $(CPPFLAGS)

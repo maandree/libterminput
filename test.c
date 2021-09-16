@@ -262,7 +262,14 @@ static const struct mouse {
 #define TYPE(STR, T)\
 	do {\
 		lineno = __LINE__;\
-		type_mem(STR, (STR) ? strlen(STR) : 0, T);\
+		type_mem(STR, strlen(STR), T);\
+		lineno = 0;\
+	} while (0)
+
+#define CONTINUE(T)\
+	do {\
+		lineno = __LINE__;\
+		type_mem(NULL, 0, T);\
 		lineno = 0;\
 	} while (0)
 
@@ -330,7 +337,7 @@ type_mem(const char *str, size_t len, enum libterminput_type type)
 {
 	alarm(5);
 	if (len)
-		TEST(write(fds[1], str, len) == len);
+		TEST(write(fds[1], str, len) == (ssize_t)len);
 	do {
 		TEST(libterminput_read(fds[0], &input, &ctx) == 1);
 	} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
@@ -341,7 +348,7 @@ static void
 keypress_(const char *str1, const char *str2, const char *str3, const char *str4,
           enum libterminput_key key, enum libterminput_mod mods, unsigned long long int times)
 {
-	int times_;
+	unsigned long long int times_;
 	size_t i;
 	alarm(5);
 	stpcpy(stpcpy(stpcpy(stpcpy(buffer, str1), str2), str3), str4);
@@ -512,16 +519,16 @@ main(void)
 	TYPE("x\033[201~", LIBTERMINPUT_TEXT);
 	TEST(input.text.nbytes == strlen("x"));
 	TEST(!memcmp(input.text.bytes, "x", strlen("x")));
-	TYPE(NULL, LIBTERMINPUT_BRACKETED_PASTE_END);
+	CONTINUE(LIBTERMINPUT_BRACKETED_PASTE_END);
 	TYPE("\033[200~x", LIBTERMINPUT_BRACKETED_PASTE_START);
-	TYPE(NULL, LIBTERMINPUT_TEXT);
+	CONTINUE(LIBTERMINPUT_TEXT);
 	TEST(input.text.nbytes == strlen("x"));
 	TEST(!memcmp(input.text.bytes, "x", strlen("x")));
 	TYPE("\033[201x~x\033[201~x", LIBTERMINPUT_TEXT);
 	TEST(input.text.nbytes == strlen("\033[201x~x"));
 	TEST(!memcmp(input.text.bytes, "\033[201x~x", strlen("\033[201x~x")));
-	TYPE(NULL, LIBTERMINPUT_BRACKETED_PASTE_END);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_BRACKETED_PASTE_END);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TYPE("\033[200~", LIBTERMINPUT_BRACKETED_PASTE_START);
 	TYPE("\033[201~", LIBTERMINPUT_BRACKETED_PASTE_END);
 	TYPE("\033[200~", LIBTERMINPUT_BRACKETED_PASTE_START);
@@ -532,7 +539,7 @@ main(void)
 	TYPE("1",  LIBTERMINPUT_NONE);
 	TYPE("~",  LIBTERMINPUT_BRACKETED_PASTE_END);
 	TYPE("\033[200~\033[201~", LIBTERMINPUT_BRACKETED_PASTE_START);
-	TYPE(NULL, LIBTERMINPUT_BRACKETED_PASTE_END);
+	CONTINUE(LIBTERMINPUT_BRACKETED_PASTE_END);
 	TYPE("\033[200~\033[201", LIBTERMINPUT_BRACKETED_PASTE_START);
 	TYPE("~", LIBTERMINPUT_BRACKETED_PASTE_END);
 
@@ -562,11 +569,11 @@ main(void)
 	TEST(input.keypress.key == LIBTERMINPUT_ESC);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 3);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_ESC);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 2);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_ESC);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
@@ -577,11 +584,11 @@ main(void)
 	TEST(input.keypress.key == LIBTERMINPUT_ESC);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 3);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_ESC);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 2);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_ESC);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
@@ -600,19 +607,19 @@ main(void)
 	TEST(input.keypress.times == 1);
 	TEST(input.keypress.symbol[0] == 't');
 	TEST(input.keypress.symbol[1] == '\0');
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
 	TEST(input.keypress.symbol[0] == 'e');
 	TEST(input.keypress.symbol[1] == '\0');
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
 	TEST(input.keypress.symbol[0] == 'x');
 	TEST(input.keypress.symbol[1] == '\0');
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
@@ -624,12 +631,12 @@ main(void)
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, "å"));
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, "ä"));
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
@@ -647,7 +654,7 @@ main(void)
 	TEST(!strcmp(input.keypress.symbol, "ö"));
 
 	buffer[0] = '-';
-	buffer[0] |= 0x80;
+	buffer[0] = (char)(buffer[0] | 0x80);
 	buffer[1] = 0;
 	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
@@ -670,28 +677,28 @@ main(void)
 	buffer[2] = 0;
 	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_CTRL | LIBTERMINPUT_META);
+	TEST(input.keypress.mods == (LIBTERMINPUT_CTRL | LIBTERMINPUT_META));
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, "Y"));
 
 	buffer[0] = 'Y';
 	buffer[0] -= '@';
-	buffer[0] |= 0x80;
+	buffer[0] = (char)(buffer[0] | 0x80);
 	buffer[1] = 0;
 	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_CTRL | LIBTERMINPUT_META);
+	TEST(input.keypress.mods == (LIBTERMINPUT_CTRL | LIBTERMINPUT_META));
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, "Y"));
 
 	buffer[0] = '\033';
 	buffer[1] = 'Y';
 	buffer[1] -= '@';
-	buffer[1] |= 0x80;
+	buffer[1] = (char)(buffer[1] | 0x80);
 	buffer[2] = 0;
 	TYPE(buffer, LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_CTRL | LIBTERMINPUT_META);
+	TEST(input.keypress.mods == (LIBTERMINPUT_CTRL | LIBTERMINPUT_META));
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, "Y"));
 
@@ -706,12 +713,12 @@ main(void)
 	buffer[1] = 0;
 	TYPE_MEM(buffer, 2, LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_CTRL | LIBTERMINPUT_META);
+	TEST(input.keypress.mods == (LIBTERMINPUT_CTRL | LIBTERMINPUT_META));
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, " "));
 
 	for (i = 0; mice[i].str; i++)
-		MOUSE(mice[i].str, mice[i].event, mice[i].button, mice[i].mods, mice[i].x, mice[i].y);
+		MOUSE(mice[i].str, mice[i].event, mice[i].button, mice[i].mods, (size_t)mice[i].x, (size_t)mice[i].y);
 
 	TYPE("\033[<0;1;2", LIBTERMINPUT_NONE);
 	MOUSE("m", LIBTERMINPUT_RELEASE, LIBTERMINPUT_BUTTON1, 0, 1, 2);
@@ -769,29 +776,29 @@ main(void)
 	TEST(input.keypress.key == LIBTERMINPUT_MACRO);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, " "));
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, " "));
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 	TEST(input.keypress.mods == LIBTERMINPUT_CTRL);
 	TEST(input.keypress.times == 1);
 	TEST(!strcmp(input.keypress.symbol, "_"));
 	TYPE("\033[M \x1f ", LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TYPE("\033[M\x1f  ", LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 
 	MOUSE("\033[M \xc6\x89#",            LIBTERMINPUT_PRESS, LIBTERMINPUT_BUTTON1, 0, 361, 3);
 	MOUSE("\033[M #\xc6\x89",            LIBTERMINPUT_PRESS, LIBTERMINPUT_BUTTON1, 0, 3, 361);
@@ -801,20 +808,20 @@ main(void)
 	TEST(input.keypress.key == LIBTERMINPUT_MACRO);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TYPE("\033[M!\xff", LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_MACRO);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 	TYPE("\033[M!!\xff", LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_MACRO);
 	TEST(input.keypress.mods == 0);
 	TEST(input.keypress.times == 1);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
-	TYPE(NULL, LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
+	CONTINUE(LIBTERMINPUT_KEYPRESS);
 
 	TYPE("\033[M", LIBTERMINPUT_NONE);
 	TYPE(" ",      LIBTERMINPUT_NONE);
@@ -900,7 +907,7 @@ main(void)
 
 	TYPE("\033[1;4u", LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_SHIFT | LIBTERMINPUT_META);
+	TEST(input.keypress.mods == (LIBTERMINPUT_SHIFT | LIBTERMINPUT_META));
 	TEST(input.keypress.times == 1);
 	TEST(input.keypress.symbol[0] == '\x01');
 	TEST(input.keypress.symbol[1] == '\0');
@@ -914,7 +921,7 @@ main(void)
 
 	TYPE("\033[128;6u", LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_SHIFT | LIBTERMINPUT_CTRL);
+	TEST(input.keypress.mods == (LIBTERMINPUT_SHIFT | LIBTERMINPUT_CTRL));
 	TEST(input.keypress.times == 1);
 	TEST(input.keypress.symbol[0] == '\xC2');
 	TEST(input.keypress.symbol[1] == '\x80');
@@ -922,7 +929,7 @@ main(void)
 
 	TYPE("\033[1114110;7u", LIBTERMINPUT_KEYPRESS); /* 0x10FFFE */
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	TEST(input.keypress.mods == (LIBTERMINPUT_META | LIBTERMINPUT_CTRL));
 	TEST(input.keypress.times == 1);
 	TEST(input.keypress.symbol[0] == '\xF4');
 	TEST(input.keypress.symbol[1] == '\x8F');
@@ -940,7 +947,7 @@ main(void)
 
 	TYPE("\033[1114111;7u", LIBTERMINPUT_KEYPRESS); /* 0x10FFFF */
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	TEST(input.keypress.mods == (LIBTERMINPUT_META | LIBTERMINPUT_CTRL));
 	TEST(input.keypress.times == 1);
 	TEST(input.keypress.symbol[0] == '\xF4');
 	TEST(input.keypress.symbol[1] == '\x8F');
@@ -950,7 +957,7 @@ main(void)
 
 	TYPE("\033[10000;8u", LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
-	TEST(input.keypress.mods == LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL);
+	TEST(input.keypress.mods == (LIBTERMINPUT_SHIFT | LIBTERMINPUT_META | LIBTERMINPUT_CTRL));
 	TEST(input.keypress.times == 1);
 	TEST(input.keypress.symbol[0] == '\xE2');
 	TEST(input.keypress.symbol[1] == '\x9C');

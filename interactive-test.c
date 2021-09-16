@@ -113,6 +113,8 @@ main(void)
 			case LIBTERMINPUT_KEYPAD_COMMA:    printf("\t%s: %s\n", "key", "keypad comma");    break;
 			case LIBTERMINPUT_KEYPAD_POINT:    printf("\t%s: %s\n", "key", "keypad point");    break;
 			case LIBTERMINPUT_KEYPAD_ENTER:    printf("\t%s: %s\n", "key", "keypad enter");    break;
+			case LIBTERMINPUT_MACRO:           printf("\t%s: %s\n", "key", "macro");           break;
+			case LIBTERMINPUT_PAUSE:           printf("\t%s: %s\n", "key", "pause");           break;
 			default:
 				printf("\t%s: %s\n", "key", "other");
 				break;
