@@ -183,7 +183,7 @@ Currently possible values are:
 A special value to mark that the input was either
 discard or not yet completed. The function only
 reads at most once so input may be complete (input
-can also be bufferd, in which case it will not
+can also be buffered, in which case it will not
 read at all).
 .TP
 .B LIBTERMINPUT_KEYPRESS
@@ -275,7 +275,7 @@ as any other character.
 The pasted text will be stored in
 .IR input->text.bytes .
 Be aware that this is not a NUL-terminated string,
-rather, it's length is stored in
+rather, its length is stored in
 .IR input->text.nbytes .
 .TP
 .B LIBTERMINPUT_MOUSEEVENT
