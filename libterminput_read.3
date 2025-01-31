@@ -137,6 +137,7 @@ union libterminput_input {
 	struct libterminput_keypress   keypress;
 	struct libterminput_text       text;
 	struct libterminput_mouseevent mouseevent;
+	struct libterminput_position   position;
 };
 
 int libterminput_read(int \fIfd\fP, union libterminput_input *\fIinput\fP, struct libterminput_state *\fIctx\fP);
