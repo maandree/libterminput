@@ -184,6 +184,16 @@ main(void)
 		} else {
 			printf("other\n");
 		}
+#if 0
+		printf("(state):\n"
+		       "\tinited=%i, mods=%#x, flags=%#x, bracketed_paste=%i, mouse_tracking=%i, meta=%i,\n"
+		       "\tn=%i, stored_head=%zu, stored_tail=%zu, paused=%i, npartial=%i, partial=\"%.*s\",\n"
+		       "\tkey=\"%s\", stored=\"%.*s\"\n",
+		       (int)ctx.inited, (unsigned)ctx.mods, (unsigned)ctx.flags, (int)ctx.bracketed_paste,
+		       (int)ctx.mouse_tracking, (int)ctx.meta, (int)ctx.n, ctx.stored_head, ctx.stored_tail,
+		       (int)ctx.paused, (int)ctx.npartial, (int)ctx.npartial, ctx.partial, ctx.key,
+		       (int)(ctx.stored_tail - ctx.stored_head), &ctx.stored[ctx.stored_head]);
+#endif
 	}
 
 	if (r < 0)
