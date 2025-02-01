@@ -6,7 +6,7 @@ libterminput_is_ready \- Check if there is read data buffered
 .nf
 #include <libterminput.h>
 
-inline int libterminput_is_ready(union libterminput_input *input, struct libterminput_state *ctx);
+inline int libterminput_is_ready(const union libterminput_input *\fIinput\fP, const struct libterminput_state *\fIctx\fP);
 .fi
 .PP
 Link with

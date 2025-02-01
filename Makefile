@@ -28,7 +28,7 @@ TESTS =\
 LOBJ = $(OBJ:.o=.lo)
 
 
-all: libterminput.a libterminput.$(LIBEXT) $(TESTS)
+all: libterminput.a libterminput.$(LIBEXT) $(TESTS) interactive-test
 $(OBJ): $(HDR)
 $(LOBJ): $(HDR)
 $(TESTS:=.o): $(HDR)
