@@ -14,7 +14,7 @@ main(void)
 	struct libterminput_state ctx;
 	union libterminput_input input;
 	struct termios stty, saved_stty;
-	int r;
+	int r, print_state;
 
 	memset(&ctx, 0, sizeof(ctx));
 
@@ -46,6 +46,8 @@ main(void)
 		fprintf(stderr, "LIBTERMINPUT_AWAITING_CURSOR_POSITION set\n");
 		libterminput_set_flags(&ctx, LIBTERMINPUT_AWAITING_CURSOR_POSITION);
 	}
+
+	print_state = !!getenv("TEST_LIBTERMINPUT_PRINT_STATE");
 
 	if (tcgetattr(STDERR_FILENO, &stty)) {
 		perror("tcgetattr STDERR_FILENO");
@@ -184,16 +186,16 @@ main(void)
 		} else {
 			printf("other\n");
 		}
-#if 0
-		printf("(state):\n"
-		       "\tinited=%i, mods=%#x, flags=%#x, bracketed_paste=%i, mouse_tracking=%i, meta=%i,\n"
-		       "\tn=%i, stored_head=%zu, stored_tail=%zu, paused=%i, npartial=%i, partial=\"%.*s\",\n"
-		       "\tkey=\"%s\", stored=\"%.*s\"\n",
-		       (int)ctx.inited, (unsigned)ctx.mods, (unsigned)ctx.flags, (int)ctx.bracketed_paste,
-		       (int)ctx.mouse_tracking, (int)ctx.meta, (int)ctx.n, ctx.stored_head, ctx.stored_tail,
-		       (int)ctx.paused, (int)ctx.npartial, (int)ctx.npartial, ctx.partial, ctx.key,
-		       (int)(ctx.stored_tail - ctx.stored_head), &ctx.stored[ctx.stored_head]);
-#endif
+		if (print_state) {
+			printf("(state):\n"
+			       "\tinited=%i, mods=%#x, flags=%#x, bracketed_paste=%i, mouse_tracking=%i, meta=%i,\n"
+			       "\tn=%i, stored_head=%zu, stored_tail=%zu, paused=%i, npartial=%i, partial=\"%.*s\",\n"
+			       "\tkey=\"%s\", stored=\"%.*s\"\n",
+			       (int)ctx.inited, (unsigned)ctx.mods, (unsigned)ctx.flags, (int)ctx.bracketed_paste,
+			       (int)ctx.mouse_tracking, (int)ctx.meta, (int)ctx.n, ctx.stored_head, ctx.stored_tail,
+			       (int)ctx.paused, (int)ctx.npartial, (int)ctx.npartial, ctx.partial, ctx.key,
+			       (int)(ctx.stored_tail - ctx.stored_head), &ctx.stored[ctx.stored_head]);
+		}
 	}
 
 	if (r < 0)
