@@ -22,8 +22,8 @@ enum libterminput_flags {
 	LIBTERMINPUT_DECSET_1005              = 0x0001,
 
 	/**
-	 * Parse CSI M as Macro key presses rather rather than
-	 * mouse tracking events
+	 * Parse CSI M as Macro key presses rather than mouse
+	 * tracking events
 	 * 
 	 * This is incompatible with all mouse tracking modes except
 	 * DECSET 1006
