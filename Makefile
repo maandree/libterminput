@@ -16,10 +16,18 @@ LIB_VERSION = $(LIB_MAJOR).$(LIB_MINOR)
 
 
 OBJ =\
-	libterminput.o
+	libterminput_read.o\
+	libterminput_is_ready.o\
+	libterminput_set_flags.o\
+	libterminput_clear_flags.o\
+	libterminput_encode_utf8__.o\
+	libterminput_check_utf8_char__.o\
+	libterminput_utf8_decode__.o\
+	libterminput_read_bracketed_paste__.o\
 
 HDR =\
-	libterminput.h
+	libterminput.h\
+	common.h
 
 TESTS =\
 	interactive-test\

@@ -1,17 +1,5 @@
 /* See LICENSE file for copyright and license details. */
-#include "libterminput.h"
-
-#include <alloca.h>
-#include <ctype.h>
-#include <limits.h>
-#include <string.h>
-#include <unistd.h>
-
-
-struct input {
-	enum libterminput_mod mods;
-	char symbol[7];
-};
+#include "common.h"
 
 
 static int
@@ -122,137 +110,6 @@ again:
 
 
 static void
-encode_utf8(unsigned long long int codepoint, char buffer[7])
-{
-	static const char masks[6] = {(char)0x00, (char)0xC0, (char)0xE0, (char)0xF0, (char)0xF8, (char)0xFC};
-	static const unsigned long long int limits[6] = {
-		1ULL << (7 + 0 * 6),
-		1ULL << (5 + 1 * 6),
-		1ULL << (4 + 2 * 6),
-		1ULL << (3 + 3 * 6),
-		1ULL << (2 + 4 * 6),
-		1ULL << (1 + 5 * 6)
-	};
-	size_t len;
-	for (len = 0; codepoint >= limits[len]; len++);
-	buffer[0] = masks[len];
-	len += 1;
-	buffer[len] = '\0';
-	for (; --len; codepoint >>= 6)
-		buffer[len] = (char)((codepoint & 0x3FULL) | 0x80ULL);
-	buffer[0] |= (char)codepoint;
-}
-
-
-static int
-check_utf8_char(const char *s, size_t *lenp, size_t size)
-{
-	size_t i;
-	*lenp = 0;
-	if (!size) {
-		return 0;
-	} else if ((*s & 0x80) == 0) {
-		*lenp = 1;
-		return 1;
-	} else if ((*s & 0xE0) == 0xC0) {
-		*lenp = 2;
-	} else if ((*s & 0xF0) == 0xE0) {
-		*lenp = 3;
-	} else if ((*s & 0xF8) == 0xF0) {
-		*lenp = 4;
-	} else if ((*s & 0xFC) == 0xF8) {
-		*lenp = 5;
-	} else if ((*s & 0xFE) == 0xFC) {
-		*lenp = 6;
-	} else {
-		*lenp = 0;
-		return -1;
-	}
-	for (i = 1; i < *lenp; i++) {
-		if (i == size)
-			return 0;
-		if ((s[i] & 0xC0) != 0x80)
-			return -1;
-	}
-	return 1;
-}
-
-
-static unsigned long long int
-utf8_decode(const char *s, size_t *ip)
-{
-	unsigned long long int cp = 0;
-	size_t len;
-
-	if ((s[*ip] & 0x80) == 0) {
-		return (unsigned long long int)s[(*ip)++];
-	} else if ((s[*ip] & 0xE0) == 0xC0) {
-		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xC0U);
-		len = 2;
-		goto need_1;
-	} else if ((s[*ip] & 0xF0) == 0xE0) {
-		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xE0U);
-		len = 3;
-		goto need_2;
-	} else if ((s[*ip] & 0xF8) == 0xF0) {
-		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xF0U);
-		len = 4;
-		goto need_3;
-	} else if ((s[*ip] & 0xFC) == 0xF8) {
-		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xF8U);
-		len = 5;
-		goto need_4;
-	} else if ((s[*ip] & 0xFE) == 0xFC) {
-		cp = (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0xFCU);
-		len = 6;
-		goto need_5;
-	}
-
-need_5:
-	if ((s[*ip] & 0xC0) != 0x80) return 0;
-	cp <<= 6;
-	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
-
-need_4:
-	if ((s[*ip] & 0xC0) != 0x80) return 0;
-	cp <<= 6;
-	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
-
-need_3:
-	if ((s[*ip] & 0xC0) != 0x80) return 0;
-	cp <<= 6;
-	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
-
-need_2:
-	if ((s[*ip] & 0xC0) != 0x80) return 0;
-	cp <<= 6;
-	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
-
-need_1:
-	if ((s[*ip] & 0xC0) != 0x80) return 0;
-	cp <<= 6;
-	cp |= (unsigned long long int)((unsigned char)s[(*ip)++] ^ 0x80U);
-
-	/* Let's ignore the 0x10FFFF upper bound. */
-
-	if (cp < 1ULL << (7 + 0 * 6))
-		return 0;
-	if (cp < 1ULL << (5 + 1 * 6))
-		return len > 2 ? 0ULL : cp;
-	if (cp < 1ULL << (4 + 2 * 6))
-		return len > 3 ? 0ULL : cp;
-	if (cp < 1ULL << (3 + 3 * 6))
-		return len > 4 ? 0ULL : cp;
-	if (cp < 1ULL << (2 + 4 * 6))
-		return len > 5 ? 0ULL : cp;
-	if (cp < 1ULL << (1 + 5 * 6))
-		return len > 6 ? 0ULL : cp;
-
-	return 0;
-}
-
-
-static void
 parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 {
 	unsigned long long int *nums, numsbuf[6];
@@ -348,9 +205,9 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					ctx->mouse_tracking = 0;
 					nums = numsbuf;
 					pos = ctx->stored_tail;
-					if ((nums[0] = utf8_decode(ctx->stored, &ctx->stored_tail)) < 32 ||
-					    (nums[1] = utf8_decode(ctx->stored, &ctx->stored_tail)) < 32 ||
-					    (nums[2] = utf8_decode(ctx->stored, &ctx->stored_tail)) < 32) {
+					if ((nums[0] = libterminput_utf8_decode__(ctx->stored, &ctx->stored_tail)) < 32 ||
+					    (nums[1] = libterminput_utf8_decode__(ctx->stored, &ctx->stored_tail)) < 32 ||
+					    (nums[2] = libterminput_utf8_decode__(ctx->stored, &ctx->stored_tail)) < 32) {
 						ctx->stored_tail = pos;
 						input->keypress.key = LIBTERMINPUT_MACRO;
 						return;
@@ -471,7 +328,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					input->type = LIBTERMINPUT_NONE;
 					break;
 				}
-				encode_utf8(nums[0], input->keypress.symbol);
+				libterminput_encode_utf8__(nums[0], input->keypress.symbol);
 				input->keypress.times = 1;
 				break;
 			case '$':
@@ -612,112 +469,6 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 }
 
 
-static int
-read_bracketed_paste(int fd, union libterminput_input *input, struct libterminput_state *ctx)
-{
-	ssize_t r;
-	size_t n;
-
-	/* Unfortunately there is no standard for how to handle pasted ESC's,
-	 * not even ESC [201~ or ESC ESC. Terminates seem to just paste ESC as
-	 * is, so we cannot do anything about them, however, a good terminal
-	 * would stop the paste at the ~ in ESC [201~, send ~ as normal, and
-	 * then continue the brackated paste mode. */
-
-	if (ctx->stored_head - ctx->stored_tail) {
-		ctx->paused = 0;
-		n = ctx->stored_head - ctx->stored_tail;
-		if (!strncmp(&ctx->stored[ctx->stored_tail], "\033[201~", n < 6 ? n : 6)) {
-			if (n >= 6) {
-				ctx->stored_tail += 6;
-				if (ctx->stored_tail == ctx->stored_head)
-					ctx->stored_tail = ctx->stored_head = 0;
-				ctx->bracketed_paste = 0;
-				input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
-				return 1;
-			}
-			input->text.nbytes = ctx->stored_head - ctx->stored_tail;
-			memcpy(input->text.bytes, &ctx->stored[ctx->stored_tail], input->text.nbytes);
-			r = read(fd, &input->text.bytes[input->text.nbytes], sizeof(input->text.bytes) - input->text.nbytes);
-			if (r <= 0)
-				return (int)r;
-			input->text.nbytes += (size_t)r;
-			ctx->stored_head = ctx->stored_tail = 0;
-			goto normal;
-		}
-		input->text.nbytes = ctx->stored_head - ctx->stored_tail;
-		memcpy(input->text.bytes, &ctx->stored[ctx->stored_tail], input->text.nbytes);
-		ctx->stored_head = ctx->stored_tail = 0;
-		goto normal;
-	}
-
-	r = read(fd, input->text.bytes, sizeof(input->text.bytes));
-	if (r <= 0)
-		return (int)r;
-	input->text.nbytes = (size_t)r;
-
-normal:
-	for (n = 0; n + 5 < input->text.nbytes; n++) {
-		if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2' &&
-		    input->text.bytes[n + 3] == '0'    && input->text.bytes[n + 4] == '1' && input->text.bytes[n + 5] == '~')
-			break;
-	}
-	do {
-		if (n + 4 < input->text.nbytes) {
-			if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2' &&
-			    input->text.bytes[n + 3] == '0'    && input->text.bytes[n + 4] == '1')
-				break;
-			n += 1;
-		}
-		if (n + 3 < input->text.nbytes) {
-			if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2' &&
-			    input->text.bytes[n + 3] == '0')
-				break;
-			n += 1;
-		}
-		if (n + 2 < input->text.nbytes) {
-			if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[' && input->text.bytes[n + 2] == '2')
-				break;
-			n += 1;
-		}
-		if (n + 1 < input->text.nbytes) {
-			if (input->text.bytes[n + 0] == '\033' && input->text.bytes[n + 1] == '[')
-				break;
-			n += 1;
-		}
-		if (n + 0 < input->text.nbytes) {
-			if (input->text.bytes[n + 0] == '\033')
-				break;
-			n += 1;
-		}
-	} while (0);
-	if (!n) {
-		if (input->text.nbytes < 6) {
-			input->text.type = LIBTERMINPUT_NONE;
-			memcpy(ctx->stored, input->text.bytes, input->text.nbytes);
-			ctx->stored_tail = 0;
-			ctx->stored_head = input->text.nbytes;
-			ctx->paused = 1;
-			return 1;
-		}
-		ctx->stored_tail = 0;
-		ctx->stored_head = input->text.nbytes - 6;
-		memcpy(ctx->stored, &input->text.bytes[6], ctx->stored_head);
-		if (ctx->stored_tail == ctx->stored_head)
-			ctx->stored_tail = ctx->stored_head = 0;
-		ctx->bracketed_paste = 0;
-		input->type = LIBTERMINPUT_BRACKETED_PASTE_END;
-		return 1;
-	}
-	ctx->stored_tail = 0;
-	ctx->stored_head = input->text.nbytes - n;
-	memcpy(ctx->stored, &input->text.bytes[n], ctx->stored_head);
-	input->text.nbytes = n;
-	input->text.type = LIBTERMINPUT_TEXT;
-	return 1;
-}
-
-
 int
 libterminput_read(int fd, union libterminput_input *input, struct libterminput_state *ctx)
 {
@@ -736,7 +487,7 @@ libterminput_read(int fd, union libterminput_input *input, struct libterminput_s
 	}
 
 	if (ctx->bracketed_paste)
-		return read_bracketed_paste(fd, input, ctx);
+		return libterminput_read_bracketed_paste__(fd, input, ctx);
 	if (!ctx->mouse_tracking) {
 		r = read_input(fd, &ret, ctx);
 		if (r <= 0)
@@ -815,15 +566,15 @@ again:
 				return 1;
 			}
 			n = ctx->stored_tail;
-			r = check_utf8_char(&ctx->stored[n], &m, ctx->stored_head - n);
+			r = libterminput_check_utf8_char__(&ctx->stored[n], ctx->stored_head - n, &m);
 			if (r <= 0)
 				goto fallback_to_none_or_macro;
 			n += m;
-			r = check_utf8_char(&ctx->stored[n], &m, ctx->stored_head - n);
+			r = libterminput_check_utf8_char__(&ctx->stored[n], ctx->stored_head - n, &m);
 			if (r <= 0)
 				goto fallback_to_none_or_macro;
 			n += m;
-			r = check_utf8_char(&ctx->stored[n], &m, ctx->stored_head - n);
+			r = libterminput_check_utf8_char__(&ctx->stored[n], ctx->stored_head - n, &m);
 			if (r <= 0) {
 			fallback_to_none_or_macro:
 				if (!r) {
@@ -900,23 +651,3 @@ again:
 
 	return 1;
 }
-
-
-int
-libterminput_set_flags(struct libterminput_state *ctx, enum libterminput_flags flags)
-{
-	ctx->flags |= flags;
-	return 0;
-}
-
-
-int
-libterminput_clear_flags(struct libterminput_state *ctx, enum libterminput_flags flags)
-{
-	ctx->flags |= flags;
-	ctx->flags ^= flags;
-	return 0;
-}
-
-
-extern inline int libterminput_is_ready(const union libterminput_input *input, const struct libterminput_state *ctx);
