@@ -187,20 +187,7 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 						}
 					}
 					input->mouseevent.button = (enum libterminput_button)nums[0];
-				} else if (!nnums & !(ctx->flags & LIBTERMINPUT_DECSET_1005)) {
-					/* Parsing output for legacy mouse tracking output. */
-					ctx->mouse_tracking = 0;
-					nums = numsbuf;
-					nums[0] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
-					nums[1] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
-					nums[2] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
-					nums[0] = (nums[0] - 32ULL) & 255ULL;
-					nums[1] = (nums[1] - 32ULL) & 255ULL;
-					nums[2] = (nums[2] - 32ULL) & 255ULL;
-					if (ctx->stored_head == ctx->stored_tail)
-						ctx->stored_head = ctx->stored_tail = 0;
-					goto decimal_mouse_tracking_set_press;
-				} else if (!nnums) {
+				} else if (!nnums && (ctx->flags & LIBTERMINPUT_DECSET_1005)) {
 					/* Parsing for semi-legacy \e[?1000;1005h output. */
 					ctx->mouse_tracking = 0;
 					nums = numsbuf;
@@ -215,6 +202,19 @@ parse_sequence(union libterminput_input *input, struct libterminput_state *ctx)
 					nums[0] = nums[0] - 32ULL;
 					nums[1] = nums[1] - 32ULL;
 					nums[2] = nums[2] - 32ULL;
+					if (ctx->stored_head == ctx->stored_tail)
+						ctx->stored_head = ctx->stored_tail = 0;
+					goto decimal_mouse_tracking_set_press;
+				} else if (!nnums) {
+					/* Parsing output for legacy mouse tracking output. */
+					ctx->mouse_tracking = 0;
+					nums = numsbuf;
+					nums[0] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+					nums[1] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+					nums[2] = (unsigned long long int)(unsigned char)ctx->stored[ctx->stored_tail++];
+					nums[0] = (nums[0] - 32ULL) & 255ULL;
+					nums[1] = (nums[1] - 32ULL) & 255ULL;
+					nums[2] = (nums[2] - 32ULL) & 255ULL;
 					if (ctx->stored_head == ctx->stored_tail)
 						ctx->stored_head = ctx->stored_tail = 0;
 					goto decimal_mouse_tracking_set_press;
