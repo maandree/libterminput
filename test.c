@@ -621,11 +621,17 @@ main(void)
 	KEYPRESS_SPECIAL_CHAR('\b', LIBTERMINPUT_ERASE);
 	KEYPRESS_SPECIAL_CHAR('\t', LIBTERMINPUT_TAB);
 	KEYPRESS_SPECIAL_CHAR('\n', LIBTERMINPUT_ENTER);
-	libterminput_set_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
 	TEST(fcntl(fds[0], F_SETFL, flags | O_NONBLOCK) >= 0);
+	libterminput_set_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
 	KEYPRESS_SPECIAL_CHAR('\033', LIBTERMINPUT_ESC);
-	TEST(fcntl(fds[0], F_SETFL, flags) >= 0);
 	libterminput_clear_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
+	libterminput_set_flags(&ctx, LIBTERMINPUT_MACRO_ON_BLOCK);
+	TYPE("\033[M", LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_MACRO);
+	TEST(input.keypress.mods == 0);
+	TEST(input.keypress.times == 1);
+	libterminput_clear_flags(&ctx, LIBTERMINPUT_MACRO_ON_BLOCK);
+	TEST(fcntl(fds[0], F_SETFL, flags) >= 0);
 
 	TYPE("text", LIBTERMINPUT_KEYPRESS);
 	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);

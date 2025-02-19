@@ -71,7 +71,18 @@ enum libterminput_flags {
 	 * This is required for distinguishing cursor position
 	 * reports from F3 key presses
 	 */
-	LIBTERMINPUT_AWAITING_CURSOR_POSITION = 0x0040
+	LIBTERMINPUT_AWAITING_CURSOR_POSITION = 0x0040,
+
+	/**
+	 * If CSI M is received without anything after it,
+	 * return Macro keypress. Since the user probably
+	 * does not have the Macro key, it seems having this
+	 * as the default behaviour introduces an unncessary
+	 * risk of misparsing input. However, if mouse tracking
+	 * is not activated, it makes since to enable this
+	 * flag.
+	 */
+	LIBTERMINPUT_MACRO_ON_BLOCK            = 0x0080
 };
 
 /**

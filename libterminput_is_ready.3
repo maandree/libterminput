@@ -30,9 +30,11 @@ The
 function should only be used if using blocking
 read operations (terminal file descriptor configured with
 .I O_NONBLOCK
-cleared). The flag
+cleared). The flags
 .I LIBTERMINPUT_ESC_ON_BLOCK
-is only meaningful for non-blocking reads. With non-blocking
+and
+.I LIBTERMINPUT_MACRO_ON_BLOCK
+are only meaningful for non-blocking reads. With non-blocking
 reads, the application should call
 .BR libterminput_read (3)
 and check for

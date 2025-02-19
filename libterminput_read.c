@@ -41,6 +41,7 @@ libterminput_read(int fd, union libterminput_input *input, struct libterminput_s
 			input->type = LIBTERMINPUT_KEYPRESS;
 			ctx->mods = 0;
 			ctx->meta = 0;
+			ctx->key[0] = '\0';
 			return 1;
 		}
 		ctx->blocked = 0;
@@ -73,7 +74,6 @@ again:
 				if (ctx->meta > 1)
 					input->keypress.mods |= LIBTERMINPUT_META;
 				ctx->queued = 1;
-				goto none;
 			}
 			goto none;
 		}
@@ -108,7 +108,16 @@ again:
 			goto none;
 		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_MACRO_ON_CSI_M)) {
 			/* complete */
-			/* TODO optionally this should also be the case if blocked */
+		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_MACRO_ON_BLOCK) &&
+		                                                       ctx->stored_head - ctx->stored_tail == 0) {
+			input->keypress.key = LIBTERMINPUT_MACRO;
+			input->keypress.times = 1;
+			input->keypress.mods = ctx->mods;
+			input->keypress.symbol[0] = '\0';
+			if (ctx->meta > 1)
+				input->keypress.mods |= LIBTERMINPUT_META;
+			ctx->queued = 1;
+			goto none;
 		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_DECSET_1005)) {
 			ctx->mouse_tracking = 1;
 			n = ctx->stored_tail;

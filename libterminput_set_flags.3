@@ -88,6 +88,15 @@ The sequence
 .BI "CSI " Ps " ; " Rs " R"
 shall be parsed as a cursor position report rather
 than as an F3 key press.
+.TP
+.B LIBTERMINPUT_MACRO_ON_BLOCK
+If CSI M is received without anything after it,
+return Macro keypress. Since the user probably
+does not have the Macro key, it seems having this
+as the default behaviour introduces an unncessary
+risk of misparsing input. However, if mouse tracking
+is not activated, it makes since to enable this
+flag.
 .PP
 .I ctx
 must have been zero-initialised, e.g. with
