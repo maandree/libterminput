@@ -554,25 +554,28 @@ union libterminput_input {
 /**
  * The current input state and configurations
  * 
- * This struct should be considered opaque
+ * NB! This struct should be considered opaque
  * 
  * Initialised with by setting all bytes to 0
  */
 struct libterminput_state {
-	int inited; /* whether the input in initialised, not this struct */
-	enum libterminput_mod mods;
-	enum libterminput_flags flags;
-	char bracketed_paste;
-	char mouse_tracking;
-	char meta;
-	char n;
-	size_t stored_head;
-	size_t stored_tail;
-	char paused;
-	char npartial;
-	char partial[7];
-	char key[44];
-	char stored[512];
+	int inited;                     /* whether the input in initialised, not this struct */
+	enum libterminput_mod mods;     /* currently active modifier keys */
+	enum libterminput_flags flags;  /* applied behaviour flags */
+	unsigned char bracketed_paste;  /* 1 if in bracketed paste, 0 otherwise */
+	unsigned char mouse_tracking;   /* length of mouse tracking data, 0 if not processing an mouse tracking event,
+	                                 * 1 if undetermined */
+	unsigned char meta;             /* number of captured meta/escape bytes */
+	unsigned char n;                /* bytes length of partially read character */
+	size_t stored_head;             /* index of first available byte in `.stored` */
+	size_t stored_tail;             /* index of next byte to write in `.stored` */
+	unsigned char paused : 1;       /* 1 if the available buffered input is incomplete */
+	unsigned char blocked : 1;      /* 1 if the available no data was available for read(2) */
+	unsigned char queued : 1;       /* 1 if a keypress is queued for output if there is no more data at next read(2) */
+	unsigned char npartial;         /* number of bytes available in `.partial` */
+	char partial[7];                /* partially read character */
+	char key[44];                   /* processed bytes the identify the pressed key or non-key-press event */
+	char stored[512];               /* buffered input not yet processed */
 };
 
 
@@ -583,7 +586,7 @@ struct libterminput_state {
  * @param   input  Output parameter for input
  * @param   ctx    State for the terminal, parts of the state may be stored in `input`
  * @return         1 normally, 0 on end of input, -1 on error
- *
+ * 
  * @throws  Any reason specified for read(3)
  */
 int libterminput_read(int fd, union libterminput_input *input, struct libterminput_state *ctx);
@@ -592,6 +595,15 @@ int libterminput_read(int fd, union libterminput_input *input, struct libterminp
  * Check if more input available that can be processed
  * by `libterminput_read` without performing any additional
  * read(3) operation
+ * 
+ * This function should only be used if using blocking
+ * read(3) operations. The flag LIBTERMINPUT_ESC_ON_BLOCK
+ * is only meaningful for non-blocking read. With non-blocking
+ * read, the application should call libterminput_read(3)
+ * and check for EAGAIN error rather than using this function,
+ * as EAGAIN errors on read can cause libterminput_read(3) to
+ * output keypresses it would otherwise not output, but in
+ * doing so not report EAGAIN.
  * 
  * @param   input  Input gathered by `libterminput_read`
  * @param   ctx    State for the terminal

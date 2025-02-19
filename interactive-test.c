@@ -1,4 +1,7 @@
 /* See LICENSE file for copyright and license details. */
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,15 +11,31 @@
 #include "libterminput.h"
 
 
+static volatile sig_atomic_t interrupted = 0;
+
+
+static void
+sigint_handler(int signo)
+{
+	(void) signo;
+	interrupted = 1;
+}
+
+
 int
 main(void)
 {
 	struct libterminput_state ctx;
 	union libterminput_input input;
 	struct termios stty, saved_stty;
-	int r, print_state;
+	int r, print_state, flags;
+	struct sigaction sa;
 
 	memset(&ctx, 0, sizeof(ctx));
+
+	memset(&sa, 0, sizeof(sa)); /* importantly, SA_RESTART is cleared from sa.sa_flags */
+	sa.sa_handler = &sigint_handler;
+	sigaction(SIGINT, &sa, NULL);
 
 	if (getenv("TEST_LIBTERMINPUT_DECSET_1005")) {
 		fprintf(stderr, "LIBTERMINPUT_DECSET_1005 set\n");
@@ -60,6 +79,18 @@ main(void)
 		return 1;
 	}
 
+	flags = fcntl(STDIN_FILENO, F_GETFL);
+	if (flags < 0) {
+		perror("fcntl STDIN_FILENO F_GETFL");
+		return 1;
+	} else if (!(flags & O_NONBLOCK)) {
+		if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) < 0) {
+			perror("fcntl STDIN_FILENO F_SETFL <old>|O_NONBLOCK");
+			return 1;
+		}
+	}
+
+again:
 	while ((r = libterminput_read(STDIN_FILENO, &input, &ctx)) > 0) {
 		if (input.type == LIBTERMINPUT_NONE) {
 			printf("none\n");
@@ -198,9 +229,19 @@ main(void)
 		}
 	}
 
-	if (r < 0)
+	if (r < 0 && !interrupted) {
+		if (errno == EAGAIN) {
+			fd_set fdset;
+			FD_ZERO(&fdset);
+			FD_SET(STDIN_FILENO, &fdset);
+			select(1, &fdset, NULL, NULL, NULL);
+			goto again;
+		}
 		perror("libterminput_read STDIN_FILENO");
+	}
 
+	if (!(flags & O_NONBLOCK))
+		fcntl(STDIN_FILENO, F_SETFL, flags);
 	tcsetattr(STDERR_FILENO, TCSAFLUSH, &saved_stty);
-	return -r;
+	return -r && !interrupted;
 }

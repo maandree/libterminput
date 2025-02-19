@@ -1,5 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,7 @@ static const struct keypress {
 	enum libterminput_mod mods;
 	enum libterminput_flags flags;
 } keypresses[] = {
+	/* TODO test new ESC O keys and test replacing ESC O with ESC ? */
 	{"\033[[", "A", LIBTERMINPUT_F1, 0, 0},
 	{"\033[[", "B", LIBTERMINPUT_F2, 0, 0},
 	{"\033[[", "C", LIBTERMINPUT_F3, 0, 0},
@@ -335,12 +337,21 @@ static int fds[2];
 static void
 type_mem(const char *str, size_t len, enum libterminput_type type)
 {
+	int flags, r;
 	alarm(5);
 	if (len)
 		TEST(write(fds[1], str, len) == (ssize_t)len);
-	do {
-		TEST(libterminput_read(fds[0], &input, &ctx) == 1);
-	} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
+	TEST((flags = fcntl(fds[0], F_GETFL)) >= 0);
+	if (flags & O_NONBLOCK) {
+		do {
+			r = libterminput_read(fds[0], &input, &ctx);
+			TEST(r == 1 || (r == -1 && errno == EAGAIN));
+		} while (input.type == LIBTERMINPUT_NONE && r > 0);
+	} else {
+		do {
+			TEST(libterminput_read(fds[0], &input, &ctx) == 1);
+		} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
+	}
 	TEST(input.type == type);
 }
 
@@ -348,16 +359,25 @@ static void
 keypress_(const char *str1, const char *str2, const char *str3, const char *str4,
           enum libterminput_key key, enum libterminput_mod mods, unsigned long long int times)
 {
+	int flags, r;
 	unsigned long long int times_;
 	size_t i;
 	alarm(5);
 	stpcpy(stpcpy(stpcpy(stpcpy(buffer, str1), str2), str3), str4);
 	if (*buffer)
 		TEST(write(fds[1], buffer, strlen(buffer)) == (ssize_t)strlen(buffer));
+	TEST((flags = fcntl(fds[0], F_GETFL)) >= 0);
 	for (times_ = times; times_; times_--) {
-		do {
-			TEST(libterminput_read(fds[0], &input, &ctx) == 1);
-		} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
+		if (flags & O_NONBLOCK) {
+			do {
+				r = libterminput_read(fds[0], &input, &ctx);
+				TEST(r == 1 || (r == -1 && errno == EAGAIN));
+			} while (input.type == LIBTERMINPUT_NONE && r > 0);
+		} else {
+			do {
+				TEST(libterminput_read(fds[0], &input, &ctx) == 1);
+			} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
+		}
 		TEST(input.type == LIBTERMINPUT_KEYPRESS);
 		TEST(input.keypress.key == key);
 		TEST(input.keypress.mods == mods);
@@ -497,9 +517,13 @@ int
 main(void)
 {
 	size_t i;
+	int flags;
 
 	memset(&ctx, 0, sizeof(ctx));
 	TEST(!pipe(fds));
+
+	flags = fcntl(fds[0], F_GETFL);
+	TEST(flags >= 0);
 
 	for (i = 0; keypresses[i].part1; i++) {
 		libterminput_set_flags(&ctx, keypresses[i].flags);
@@ -598,7 +622,9 @@ main(void)
 	KEYPRESS_SPECIAL_CHAR('\t', LIBTERMINPUT_TAB);
 	KEYPRESS_SPECIAL_CHAR('\n', LIBTERMINPUT_ENTER);
 	libterminput_set_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
+	TEST(fcntl(fds[0], F_SETFL, flags | O_NONBLOCK) >= 0);
 	KEYPRESS_SPECIAL_CHAR('\033', LIBTERMINPUT_ESC);
+	TEST(fcntl(fds[0], F_SETFL, flags) >= 0);
 	libterminput_clear_flags(&ctx, LIBTERMINPUT_ESC_ON_BLOCK);
 
 	TYPE("text", LIBTERMINPUT_KEYPRESS);

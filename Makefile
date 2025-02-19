@@ -24,6 +24,12 @@ OBJ =\
 	libterminput_check_utf8_char__.o\
 	libterminput_utf8_decode__.o\
 	libterminput_read_bracketed_paste__.o\
+	libterminput_parse_decimal_mouse_tracking__.o\
+	libterminput_parse_csi_m_mouse_tracking__.o\
+	libterminput_parse_csi_t_mouse_tracking__.o\
+	libterminput_parse_csi_small_t_mouse_tracking__.o\
+	libterminput_parse_sequence__.o\
+	libterminput_read_symbol__.o
 
 HDR =\
 	libterminput.h\

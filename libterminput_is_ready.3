@@ -24,6 +24,33 @@ is buffered data but the library knows it
 it not enough to return something they,
 it will also return that there is nothing
 buffered.
+.PP
+The
+.BR libterminput_is_ready ()
+function should only be used if using blocking
+read operations (terminal file descriptor configured with
+.I O_NONBLOCK
+cleared). The flag
+.I LIBTERMINPUT_ESC_ON_BLOCK
+is only meaningful for non-blocking reads. With non-blocking
+reads, the application should call
+.BR libterminput_read (3)
+and check for
+.I EAGAIN
+error rather than using the
+.BR libterminput_is_ready ()
+function, as
+.I EAGAIN
+errors on read can cause the
+.BR libterminput_read (3)
+function to output keypresses it would otherwise not output,
+but in doing so not report
+.I EAGAIN
+(although
+.I errno
+will still be set to
+.IR EAGAIN ,
+so the application can still check if this occurred).
 
 .SH RETURN VALUE
 The
@@ -57,4 +84,5 @@ None.
 None.
 
 .SH SEE ALSO
-.BR libterminput_read (3)
+.BR libterminput_read (3),
+.BR fcntl (3)

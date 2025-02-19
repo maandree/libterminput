@@ -84,7 +84,8 @@ libterminput_read_bracketed_paste__(int fd, union libterminput_input *input, str
 	}
 
 	/* If the input is solely a truncation of the bracketed paste
-	 * end marker, output that we do not have any complete input */
+	 * end marker, output that we do not have any complete input,
+	 * and pause as the available buffered input is incomplete */
 	if (input->text.nbytes < 6U) {
 		input->text.type = LIBTERMINPUT_NONE;
 		memcpy(ctx->stored, input->text.bytes, input->text.nbytes);
