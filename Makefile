@@ -15,11 +15,26 @@ LIB_MINOR = 0
 LIB_VERSION = $(LIB_MAJOR).$(LIB_MINOR)
 
 
+MAN3 =\
+	libterminput_read.3\
+	libterminput_is_ready.3\
+	libterminput_set_flags.3\
+	libterminput_clear_flags.3
+
 OBJ =\
-	libterminput_read.o\
-	libterminput_is_ready.o\
-	libterminput_set_flags.o\
-	libterminput_clear_flags.o\
+	$(MAN3:.3=.o)\
+	libterminput_marshal_input.o\
+	libterminput_marshal_state.o\
+	libterminput_unmarshal_input.o\
+	libterminput_unmarshal_state.o\
+	libterminput_marshal_keypress__.o\
+	libterminput_marshal_text__.o\
+	libterminput_marshal_mouseevent__.o\
+	libterminput_marshal_position__.o\
+	libterminput_unmarshal_keypress__.o\
+	libterminput_unmarshal_text__.o\
+	libterminput_unmarshal_mouseevent__.o\
+	libterminput_unmarshal_position__.o\
 	libterminput_encode_utf8__.o\
 	libterminput_check_utf8_char__.o\
 	libterminput_utf8_decode__.o\
@@ -81,8 +96,7 @@ install: libterminput.a libterminput.$(LIBEXT)
 	$(FIX_INSTALL_NAME) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBMINOREXT)"
 	ln -sf -- libterminput.$(LIBMINOREXT) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBMAJOREXT)"
 	ln -sf -- libterminput.$(LIBMAJOREXT) "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBEXT)"
-	cp -- libterminput_read.3 libterminput_set_flags.3 libterminput_is_ready.3 "$(DESTDIR)$(MANPREFIX)/man3"
-	ln -sf -- libterminput_set_flags.3 "$(DESTDIR)$(MANPREFIX)/man3/libterminput_clear_flags.3"
+	cp -P -- $(MAN3) "$(DESTDIR)$(MANPREFIX)/man3"
 	cp -- libterminput.7 "$(DESTDIR)$(MANPREFIX)/man7"
 
 uninstall:
@@ -91,10 +105,7 @@ uninstall:
 	-rm -f -- "$(DESTDIR)$(PREFIX)/lib/libterminput.$(LIBEXT)"
 	-rm -f -- "$(DESTDIR)$(PREFIX)/lib/libterminput.a"
 	-rm -f -- "$(DESTDIR)$(PREFIX)/include/libterminput.h"
-	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_read.3"
-	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_set_flags.3"
-	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_clear_flags.3"
-	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man3/libterminput_is_ready.3"
+	-cd -- "$(DESTDIR)$(MANPREFIX)/man3/" && rm -f -- $(MAN3)
 	-rm -f -- "$(DESTDIR)$(MANPREFIX)/man7/libterminput.7"
 
 clean:

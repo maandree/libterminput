@@ -17,6 +17,19 @@
 
 
 /**
+ * Mark that there is no input available or pending
+ * 
+ * @param  INPUT_OUT:union libterminput_input *input  The input output
+ */
+#define NOTHING(INPUT_OUT)\
+	do {\
+		union libterminput_input *input__ = (INPUT_OUT);\
+		input__->type = LIBTERMINPUT_NONE;\
+		input__->keypress.key = LIBTERMINPUT_SYMBOL;\
+	} while (0);
+
+
+/**
  * Singlar read symbol
  */
 struct input {
@@ -129,6 +142,16 @@ HIDDEN void libterminput_parse_sequence__(union libterminput_input *input, struc
  * @throws  Any reason specified for read(3)
  */
 HIDDEN int libterminput_read_symbol__(int fd, struct input *input, struct libterminput_state *ctx);
+
+/* TODO doc, test */
+HIDDEN int libterminput_marshal_keypress__(struct libterminput_marshaller *how, const struct libterminput_keypress *what);
+HIDDEN int libterminput_marshal_text__(struct libterminput_marshaller *how, const struct libterminput_text *what);
+HIDDEN int libterminput_marshal_mouseevent__(struct libterminput_marshaller *how, const struct libterminput_mouseevent *what);
+HIDDEN int libterminput_marshal_position__(struct libterminput_marshaller *how, const struct libterminput_position *what);
+HIDDEN int libterminput_unmarshal_keypress__(struct libterminput_unmarshaller *how, struct libterminput_keypress *what);
+HIDDEN int libterminput_unmarshal_text__(struct libterminput_unmarshaller *how, struct libterminput_text *what);
+HIDDEN int libterminput_unmarshal_mouseevent__(struct libterminput_unmarshaller *how, struct libterminput_mouseevent *what);
+HIDDEN int libterminput_unmarshal_position__(struct libterminput_unmarshaller *how, struct libterminput_position *what);
 
 
 #undef HIDDEN

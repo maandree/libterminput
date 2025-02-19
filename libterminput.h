@@ -85,6 +85,7 @@ enum libterminput_flags {
 	LIBTERMINPUT_MACRO_ON_BLOCK            = 0x0080
 };
 
+
 /**
  * Modifier keys
  * 
@@ -107,6 +108,7 @@ enum libterminput_mod {
 	 */
 	LIBTERMINPUT_CTRL  = 0x04
 };
+
 
 /**
  * Keyboard buttons
@@ -177,6 +179,7 @@ enum libterminput_key {
 	LIBTERMINPUT_KEYPAD_POINT,
 	LIBTERMINPUT_KEYPAD_ENTER
 };
+
 
 /**
  * Mouse buttons
@@ -264,6 +267,7 @@ enum libterminput_button {
 	LIBTERMINPUT_XBUTTON4
 };
 
+
 /**
  * Input event type
  */
@@ -316,6 +320,7 @@ enum libterminput_type {
 	LIBTERMINPUT_CURSOR_POSITION     /* response to CSI 6 n */
 };
 
+
 /**
  * Mouse event subtype
  */
@@ -345,6 +350,7 @@ enum libterminput_event {
 	 */
 	LIBTERMINPUT_HIGHLIGHT_OUTSIDE
 };
+
 
 /**
  * Keypress event
@@ -395,6 +401,7 @@ struct libterminput_keypress {
 	char symbol[7];
 };
 
+
 /**
  * Text from a bracketed paste
  */
@@ -423,6 +430,7 @@ struct libterminput_text {
 	 */
 	char bytes[512];
 };
+
 
 /**
  * Mouse event
@@ -498,6 +506,7 @@ struct libterminput_mouseevent {
 	size_t end_y;
 };
 
+
 /**
  * Cursor position response
  */
@@ -522,6 +531,7 @@ struct libterminput_position {
 	size_t y;
 };
 
+
 /**
  * Input event
  */
@@ -529,7 +539,7 @@ union libterminput_input {
 	/**
 	 * Input event type, used to determine which
 	 * other member to read
-	 *
+	 * 
 	 * The following values have no corresponding
 	 * member to read data from:
 	 * `LIBTERMINPUT_NONE`,
@@ -537,6 +547,12 @@ union libterminput_input {
 	 * `LIBTERMINPUT_BRACKETED_PASTE_END`,
 	 * `LIBTERMINPUT_TERMINAL_IS_OK`,
 	 * `LIBTERMINPUT_TERMINAL_IS_NOT_OK`
+	 * 
+	 * Internal comment:
+	 * When `.type == LIBTERMINPUT_NONE`, `.keypress.key`
+	 * is normally set to `LIBTERMINPUT_SYMBOL`, however
+	 * if it is set to anything else, there is a queued
+	 * keypress
 	 */
 	enum libterminput_type type;
 
@@ -587,6 +603,28 @@ struct libterminput_state {
 	char partial[7];                /* partially read character */
 	char key[44];                   /* processed bytes the identify the pressed key or non-key-press event */
 	char stored[512];               /* buffered input not yet processed */
+};
+
+
+/* TODO doc */
+struct libterminput_marshaller {
+	int (*store)(struct libterminput_marshaller *this, const void *data, size_t size);
+	union {
+		void *ptr;
+		int i;
+		size_t zu;
+	} user;
+};
+
+
+/* TODO doc */
+struct libterminput_unmarshaller {
+	int (*load)(struct libterminput_unmarshaller *this, void *data, size_t size);
+	union {
+		void *ptr;
+		int i;
+		size_t zu;
+	} user;
 };
 
 
@@ -651,6 +689,12 @@ int libterminput_set_flags(struct libterminput_state *ctx, enum libterminput_fla
  * The current version of this function cannot fail
  */
 int libterminput_clear_flags(struct libterminput_state *ctx, enum libterminput_flags flags);
+
+/* TODO doc, man */
+int libterminput_marshal_input(struct libterminput_marshaller *how, const union libterminput_input *what);
+int libterminput_marshal_state(struct libterminput_marshaller *how, const struct libterminput_state *what);
+int libterminput_unmarshal_input(struct libterminput_unmarshaller *how, union libterminput_input *what);
+int libterminput_unmarshal_state(struct libterminput_unmarshaller *how, struct libterminput_state *what);
 
 
 #endif

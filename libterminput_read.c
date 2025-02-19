@@ -74,6 +74,8 @@ again:
 				if (ctx->meta > 1)
 					input->keypress.mods |= LIBTERMINPUT_META;
 				ctx->queued = 1;
+				input->type = LIBTERMINPUT_NONE;
+				return 1;
 			}
 			goto none;
 		}
@@ -117,7 +119,8 @@ again:
 			if (ctx->meta > 1)
 				input->keypress.mods |= LIBTERMINPUT_META;
 			ctx->queued = 1;
-			goto none;
+			input->type = LIBTERMINPUT_NONE;
+			return 1;
 		} else if (ctx->key[0] == '[' && ctx->key[1] == 'M' && (ctx->flags & LIBTERMINPUT_DECSET_1005)) {
 			ctx->mouse_tracking = 1;
 			n = ctx->stored_tail;
@@ -188,6 +191,6 @@ again:
 	return 1;
 
 none:
-	input->type = LIBTERMINPUT_NONE;
+	NOTHING(input);
 	return 1;
 }

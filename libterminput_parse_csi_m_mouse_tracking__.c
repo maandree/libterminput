@@ -45,7 +45,7 @@ libterminput_parse_csi_m_mouse_tracking__(union libterminput_input *input, struc
 			ctx->stored_head = ctx->stored_tail = 0;
 
 	} else {
-		input->type = LIBTERMINPUT_NONE;
+		NOTHING(input);
 		return;
 	}
 

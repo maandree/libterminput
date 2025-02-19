@@ -112,7 +112,7 @@ libterminput_parse_sequence__(union libterminput_input *input, struct libterminp
 				break;
 			case 'u':
 				if (nums[0] > 0x10FFFFULL || (nums[0] & 0xFFF800ULL) == 0xD800ULL) {
-					input->type = LIBTERMINPUT_NONE;
+					NOTHING(input);
 					break;
 				}
 				libterminput_encode_utf8__(nums[0], input->keypress.symbol);
@@ -268,7 +268,7 @@ libterminput_parse_sequence__(union libterminput_input *input, struct libterminp
 	default:
 		/* This shouldn't happen (without goto) */
 	suppress:
-		input->type = LIBTERMINPUT_NONE;
+		NOTHING(input);
 		break;
 	}
 }
