@@ -3,7 +3,7 @@
 
 
 int
-libterminput_unmarshal_position__(struct libterminput_unmarshaller *how, struct libterminput_position *what)
+libterminput_unmarshal_position__(struct libterminput_unmarshaller *how, struct libterminput_position *what) /* TODO test */
 {
 	what->type = LIBTERMINPUT_CURSOR_POSITION;
 	return how->load(how, &what->x, sizeof(size_t) * 2U);

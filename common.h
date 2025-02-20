@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -143,14 +144,100 @@ HIDDEN void libterminput_parse_sequence__(union libterminput_input *input, struc
  */
 HIDDEN int libterminput_read_symbol__(int fd, struct input *input, struct libterminput_state *ctx);
 
-/* TODO doc, test */
+/**
+ * Marshal the parsed input
+ * 
+ * @param   how   Object used to store the serialization
+ * @param   what  The input to marshal
+ * @return        0 on success, -1 on failure
+ * 
+ * This function will fail for any reason `*how->store` fails
+ */
 HIDDEN int libterminput_marshal_keypress__(struct libterminput_marshaller *how, const struct libterminput_keypress *what);
+
+/**
+ * Marshal the parsed input
+ * 
+ * @param   how   Object used to store the serialization
+ * @param   what  The input to marshal
+ * @return        0 on success, -1 on failure
+ * 
+ * This function will fail for any reason `*how->store` fails
+ */
 HIDDEN int libterminput_marshal_text__(struct libterminput_marshaller *how, const struct libterminput_text *what);
+
+/**
+ * Marshal the parsed input
+ * 
+ * @param   how   Object used to store the serialization
+ * @param   what  The input to marshal
+ * @return        0 on success, -1 on failure
+ * 
+ * This function will fail for any reason `*how->store` fails
+ */
 HIDDEN int libterminput_marshal_mouseevent__(struct libterminput_marshaller *how, const struct libterminput_mouseevent *what);
+
+/**
+ * Marshal the parsed input
+ * 
+ * @param   how   Object used to store the serialization
+ * @param   what  The input to marshal
+ * @return        0 on success, -1 on failure
+ * 
+ * This function will fail for any reason `*how->store` fails
+ */
 HIDDEN int libterminput_marshal_position__(struct libterminput_marshaller *how, const struct libterminput_position *what);
+
+/**
+ * Unmarshal the parsed input
+ * 
+ * @param   how   Object used to load the serialization
+ * @param   what  Output parameter for the unmarshalled input
+ * @return        0 on success, -1 on failure
+ * 
+ * @throws  EINVAL  Invalid serialisation
+ * 
+ * This function will fail for any reason `*how->load` fails
+ */
 HIDDEN int libterminput_unmarshal_keypress__(struct libterminput_unmarshaller *how, struct libterminput_keypress *what);
+
+/**
+ * Unmarshal the parsed input
+ * 
+ * @param   how   Object used to load the serialization
+ * @param   what  Output parameter for the unmarshalled input
+ * @return        0 on success, -1 on failure
+ * 
+ * @throws  EINVAL  Invalid serialisation
+ * 
+ * This function will fail for any reason `*how->load` fails
+ */
 HIDDEN int libterminput_unmarshal_text__(struct libterminput_unmarshaller *how, struct libterminput_text *what);
+
+/**
+ * Unmarshal the parsed input
+ * 
+ * @param   how   Object used to load the serialization
+ * @param   what  Output parameter for the unmarshalled input
+ * @return        0 on success, -1 on failure
+ * 
+ * @throws  EINVAL  Invalid serialisation
+ * 
+ * This function will fail for any reason `*how->load` fails
+ */
 HIDDEN int libterminput_unmarshal_mouseevent__(struct libterminput_unmarshaller *how, struct libterminput_mouseevent *what);
+
+/**
+ * Unmarshal the parsed input
+ * 
+ * @param   how   Object used to load the serialization
+ * @param   what  Output parameter for the unmarshalled input
+ * @return        0 on success, -1 on failure
+ * 
+ * @throws  EINVAL  Invalid serialisation
+ * 
+ * This function will fail for any reason `*how->load` fails
+ */
 HIDDEN int libterminput_unmarshal_position__(struct libterminput_unmarshaller *how, struct libterminput_position *what);
 
 

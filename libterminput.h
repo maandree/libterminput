@@ -10,6 +10,8 @@
  * set or clear his flag after setting or clearing it on
  * the terminal, and the user must make sure that the
  * terminal support this flag if set
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 enum libterminput_flags {
 	/**
@@ -81,6 +83,8 @@ enum libterminput_flags {
 	 * risk of misparsing input. However, if mouse tracking
 	 * is not activated, it makes since to enable this
 	 * flag.
+	 * 
+	 * @since  1.1
 	 */
 	LIBTERMINPUT_MACRO_ON_BLOCK            = 0x0080
 };
@@ -91,6 +95,8 @@ enum libterminput_flags {
  * 
  * These are the commonly reported modifiers,
  * but additional modifiers are possible
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 enum libterminput_mod {
 	/**
@@ -118,6 +124,8 @@ enum libterminput_mod {
  * against, not compiled against, so other values can be
  * reported the application is linked against a newer version
  * of the library than it is compiled against
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 enum libterminput_key {
 	/**
@@ -178,6 +186,8 @@ enum libterminput_key {
 	LIBTERMINPUT_KEYPAD_COMMA,
 	LIBTERMINPUT_KEYPAD_POINT,
 	LIBTERMINPUT_KEYPAD_ENTER
+
+#define LIBTERMINPUT_KEYPAD__LAST__ LIBTERMINPUT_KEYPAD_ENTER /* for internal use */
 };
 
 
@@ -186,6 +196,8 @@ enum libterminput_key {
  * 
  * It is possible that non-listed buttons are
  * reported in events
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 enum libterminput_button {
 	/**
@@ -270,6 +282,8 @@ enum libterminput_button {
 
 /**
  * Input event type
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 enum libterminput_type {
 	/**
@@ -323,6 +337,8 @@ enum libterminput_type {
 
 /**
  * Mouse event subtype
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 enum libterminput_event {
 	/**
@@ -359,6 +375,8 @@ enum libterminput_event {
  * particularly when mouse tracking is disabled.
  * In particular, mouse scrolling may appear as
  * repeated Up key or Down key pesses
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 struct libterminput_keypress {
 	/**
@@ -404,6 +422,8 @@ struct libterminput_keypress {
 
 /**
  * Text from a bracketed paste
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 struct libterminput_text {
 	/**
@@ -434,6 +454,8 @@ struct libterminput_text {
 
 /**
  * Mouse event
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 struct libterminput_mouseevent {
 	/**
@@ -509,6 +531,8 @@ struct libterminput_mouseevent {
 
 /**
  * Cursor position response
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 struct libterminput_position {
 	/**
@@ -534,6 +558,8 @@ struct libterminput_position {
 
 /**
  * Input event
+ * 
+ * @since  1.0 (applies to all members unless stated otherwise)
  */
 union libterminput_input {
 	/**
@@ -584,6 +610,8 @@ union libterminput_input {
  * NB! This struct should be considered opaque
  * 
  * Initialised with by setting all bytes to 0
+ * 
+ * @since  1.0
  */
 struct libterminput_state {
 	int inited;                     /* whether the input in initialised, not this struct */
@@ -599,6 +627,7 @@ struct libterminput_state {
 	unsigned char paused : 1;       /* 1 if the available buffered input is incomplete */
 	unsigned char blocked : 1;      /* 1 if the available no data was available for read(2) */
 	unsigned char queued : 1;       /* 1 if a keypress is queued for output if there is no more data at next read(2) */
+	unsigned char unused_bits : 5;  /* should be zero due to how the struct should be initialised */
 	unsigned char npartial;         /* number of bytes available in `.partial` */
 	char partial[7];                /* partially read character */
 	char key[44];                   /* processed bytes the identify the pressed key or non-key-press event */
@@ -606,9 +635,26 @@ struct libterminput_state {
 };
 
 
-/* TODO doc */
+/**
+ * User provided function and associated binary
+ * data used to store the state
+ * 
+ * @since  1.1 (applies to all members unless stated otherwise)
+ */
 struct libterminput_marshaller {
+	/**
+	 * Callback function to store data
+	 * 
+	 * @param   this  Pointer to the object containing this function
+	 * @param   data  The data to store
+	 * @param   size  The number of bytes in `data`
+	 * @return        0 on success, -1 on failure
+	 */
 	int (*store)(struct libterminput_marshaller *this, const void *data, size_t size);
+
+	/**
+	 * User-defined data
+	 */
 	union {
 		void *ptr;
 		int i;
@@ -617,9 +663,26 @@ struct libterminput_marshaller {
 };
 
 
-/* TODO doc */
+/**
+ * User provided function and associated binary
+ * data used to load the state
+ * 
+ * @since  1.1 (applies to all members unless stated otherwise)
+ */
 struct libterminput_unmarshaller {
+	/**
+	 * Callback function to load data
+	 * 
+	 * @param   this  Pointer to the object containing this function
+	 * @param   data  Output buffer for the data
+	 * @param   size  The number of bytes to load into `data`
+	 * @return        0 on success, -1 on failure
+	 */
 	int (*load)(struct libterminput_unmarshaller *this, void *data, size_t size);
+
+	/**
+	 * User-defined data
+	 */
 	union {
 		void *ptr;
 		int i;
@@ -637,6 +700,8 @@ struct libterminput_unmarshaller {
  * @return         1 normally, 0 on end of input, -1 on error
  * 
  * @throws  Any reason specified for read(3)
+ * 
+ * @since  1.0
  */
 int libterminput_read(int fd, union libterminput_input *input, struct libterminput_state *ctx);
 
@@ -657,6 +722,8 @@ int libterminput_read(int fd, union libterminput_input *input, struct libterminp
  * @param   input  Input gathered by `libterminput_read`
  * @param   ctx    State for the terminal
  * @return         1 if there there is more input available, 0 otherwise
+ * 
+ * @since  1.0
  */
 inline int
 libterminput_is_ready(const union libterminput_input *input, const struct libterminput_state *ctx)
@@ -676,6 +743,8 @@ libterminput_is_ready(const union libterminput_input *input, const struct libter
  * @return         0 on success, -1 on failure
  * 
  * The current version of this function cannot fail
+ * 
+ * @since  1.0
  */
 int libterminput_set_flags(struct libterminput_state *ctx, enum libterminput_flags flags);
 
@@ -687,13 +756,68 @@ int libterminput_set_flags(struct libterminput_state *ctx, enum libterminput_fla
  * @return         0 on success, -1 on failure
  * 
  * The current version of this function cannot fail
+ * 
+ * @since  1.0
  */
 int libterminput_clear_flags(struct libterminput_state *ctx, enum libterminput_flags flags);
 
-/* TODO doc, man */
+/**
+ * Marshal the parsed input
+ * 
+ * @param   how   Object used to store the serialisation
+ * @param   what  The input to marshal
+ * @return        0 on success, -1 on failure
+ * 
+ * This function will fail for any reason `*how->store` fails
+ * 
+ * @since  1.1
+ */
 int libterminput_marshal_input(struct libterminput_marshaller *how, const union libterminput_input *what);
+
+/**
+ * Marshal the input parsing state
+ * 
+ * It's important to also use `libterminput_marshal_input`
+ * as it may contain part of the state
+ * 
+ * @param   how   Object used to store the serialisation
+ * @param   what  The state to marshal
+ * @return        0 on success, -1 on failure
+ * 
+ * This function will fail for any reason `*how->store` fails
+ * 
+ * @since  1.1
+ */
 int libterminput_marshal_state(struct libterminput_marshaller *how, const struct libterminput_state *what);
+
+/**
+ * Unmarshal the parsed input
+ * 
+ * @param   how   Object used to load the serialisation
+ * @param   what  Output parameter for the unmarshalled input
+ * @return        0 on success, -1 on failure
+ * 
+ * @throws  EINVAL  Invalid serialisation
+ * 
+ * This function will also fail for any reason `*how->load` fails
+ * 
+ * @since  1.1
+ */
 int libterminput_unmarshal_input(struct libterminput_unmarshaller *how, union libterminput_input *what);
+
+/**
+ * Unmarshal the input parsing state
+ * 
+ * @param   how   Object used to load the serialisation
+ * @param   what  Output parameter for the unmarshalled state
+ * @return        0 on success, -1 on failure
+ * 
+ * @throws  EINVAL  Invalid serialisation
+ * 
+ * This function will also fail for any reason `*how->load` fails
+ * 
+ * @since  1.1
+ */
 int libterminput_unmarshal_state(struct libterminput_unmarshaller *how, struct libterminput_state *what);
 
 

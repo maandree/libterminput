@@ -3,13 +3,17 @@
 
 
 int
-libterminput_unmarshal_keypress__(struct libterminput_unmarshaller *how, struct libterminput_keypress *what)
+libterminput_unmarshal_keypress__(struct libterminput_unmarshaller *how, struct libterminput_keypress *what) /* TODO test */
 {
 	what->type = LIBTERMINPUT_KEYPRESS;
 	if (how->load(how, &what->key, sizeof(what->key)) ||
 	    how->load(how, &what->times, sizeof(what->times)) ||
 	    how->load(how, &what->mods, sizeof(what->mods)))
 		return -1;
+	if ((uintmax_t)what->key > (uintmax_t)LIBTERMINPUT_KEYPAD__LAST__) {
+		errno = EINVAL;
+		return -1;
+	}
 	if (what->key == LIBTERMINPUT_SYMBOL) {
 		return how->load(how, what->symbol, sizeof(what->symbol));
 	} else {

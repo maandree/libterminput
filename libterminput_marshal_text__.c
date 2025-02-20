@@ -3,10 +3,10 @@
 
 
 int
-libterminput_marshal_text__(struct libterminput_marshaller *how, const struct libterminput_text *what)
+libterminput_marshal_text__(struct libterminput_marshaller *how, const struct libterminput_text *what) /* TODO test */
 {
 	if (how->store(how, &what->nbytes, sizeof(what->nbytes)) ||
-	    how->store(how, what->bytes, sizeof(what->nbytes)))
+	    how->store(how, what->bytes, what->nbytes))
 		return -1;
 	return 0;
 }

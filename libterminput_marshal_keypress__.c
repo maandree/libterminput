@@ -3,7 +3,7 @@
 
 
 int
-libterminput_marshal_keypress__(struct libterminput_marshaller *how, const struct libterminput_keypress *what)
+libterminput_marshal_keypress__(struct libterminput_marshaller *how, const struct libterminput_keypress *what) /* TODO test */
 {
 	if (how->store(how, &what->key, sizeof(what->key)) ||
 	    how->store(how, &what->times, sizeof(what->times)) ||

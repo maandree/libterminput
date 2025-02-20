@@ -15,16 +15,30 @@ libterminput_unmarshal_input(struct libterminput_unmarshaller *how, union libter
 		if (how->load(how, &what->type, sizeof(what->type)))
 			return -1;
 	}
-	if (what->type == LIBTERMINPUT_KEYPRESS)
+	switch ((int)what->type) {
+	case LIBTERMINPUT_KEYPRESS:
 		r = libterminput_unmarshal_keypress__(how, &what->keypress);
-	else if (what->type == LIBTERMINPUT_TEXT)
+		break;
+	case LIBTERMINPUT_TEXT:
 		r = libterminput_unmarshal_text__(how, &what->text);
-	else if (what->type == LIBTERMINPUT_MOUSEEVENT)
+		break;
+	case LIBTERMINPUT_MOUSEEVENT:
 		r = libterminput_unmarshal_mouseevent__(how, &what->mouseevent);
-	else if (what->type == LIBTERMINPUT_CURSOR_POSITION)
+		break;
+	case LIBTERMINPUT_CURSOR_POSITION:
 		r = libterminput_unmarshal_position__(how, &what->position);
-	else
+		break;
+	case LIBTERMINPUT_NONE:
+	case LIBTERMINPUT_BRACKETED_PASTE_START:
+	case LIBTERMINPUT_BRACKETED_PASTE_END:
+	case LIBTERMINPUT_TERMINAL_IS_OK:
+	case LIBTERMINPUT_TERMINAL_IS_NOT_OK:
 		r = 0;
+		break;
+	default:
+		errno = EINVAL;
+		return -1;
+	}
 	what->type = type;
 	return r;
 }

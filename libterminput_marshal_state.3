@@ -1,0 +1,121 @@
+.TH LIBTERMINPUT_MARSHAL_STATE 3 LIBTERMINPUT
+.SH NAME
+libterminput_marshal_state \- Marshal the input parsing state
+.br
+libterminput_marshal_input \- Marshal the parsed input
+
+.SH SYNOPSIS
+.nf
+#include <libterminput.h>
+
+struct libterminput_marshaller {
+	int (*store)(struct libterminput_marshaller *\fIthis\fP, const void *\fIdata\fP, size_t \fIsize\fP);
+	union {
+		void *ptr;
+		int i;
+		size_t zu;
+	} user;
+};
+
+int libterminput_marshal_state(struct libterminput_marshaller *\fIhow\fP, const struct libterminput_state *\fIwhat\fP);
+int libterminput_marshal_input(struct libterminput_marshaller *\fIhow\fP, const union libterminput_input *\fIwhat\fP);
+.fi
+.PP
+Link with
+.IR \-lterminput .
+
+.SH DESCRIPTION
+The
+.BR libterminput_marshal_state ()
+and
+.BR libterminput_marshal_input ()
+function marshals the contents of
+.I what
+using
+.IR *how->store .
+.PP
+It's important to also use the
+.BR libterminput_marshal_input ()
+function in addition to the
+.BR libterminput_marshal_state ()
+function as part of the state may be stored in the
+.IR "union libterminput_input" .
+.PP
+.I *how->store
+must return 0 on success and -1 on failure, and may set
+.I errno
+to indicate the error.
+.I how
+is fed back into
+.I *how->store
+(as
+.IR this )
+so that the
+.I *how->store
+function can use and modify
+.I how->user
+which contains application-defined data
+(typically a buffer, a file descriptor, or
+the size of the serialisation).
+.I data
+will be set to the binary data to store, and
+.I size
+will be set to the number of bytes from
+.I data
+to store.
+
+.SH RETURN VALUE
+The
+.BR libterminput_marshal_state ()
+and
+.BR libterminput_marshal_input ()
+functions return 0 upon successful completion.
+On failure,
+.B -1
+is returnes, but
+.I errno
+remains unmodified, however any changes to
+.I errno
+by
+.I *how->store
+will remain.
+
+.SH ERRORS
+The
+.BR libterminput_marshal_state ()
+and
+.BR libterminput_marshal_input ()
+functions fail, without further modifying
+.IR errno ,
+if
+.I *how->store
+fails.
+
+.SH EXAMPLES
+None.
+
+.SH APPLICATION USAGE
+None.
+
+.SH RATIONALE
+None.
+
+.SH FUTURE DIRECTIONS
+None.
+
+.SH HISTORY
+The
+.BR libterminput_marshal_state ()
+and
+.BR libterminput_marshal_input ()
+functions were added in version 1.1 of libterminput.
+
+.SH NOTES
+None.
+
+.SH BUGS
+None.
+
+.SH SEE ALSO
+.BR libterminput_unmarshal_state (3),
+.BR libterminput_read (3)

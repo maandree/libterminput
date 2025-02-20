@@ -11,7 +11,7 @@ include mk/$(OS).mk
 
 
 LIB_MAJOR = 1
-LIB_MINOR = 0
+LIB_MINOR = 1
 LIB_VERSION = $(LIB_MAJOR).$(LIB_MINOR)
 
 
@@ -19,22 +19,14 @@ MAN3 =\
 	libterminput_read.3\
 	libterminput_is_ready.3\
 	libterminput_set_flags.3\
-	libterminput_clear_flags.3
+	libterminput_clear_flags.3\
+	libterminput_marshal_input.3\
+	libterminput_marshal_state.3\
+	libterminput_unmarshal_input.3\
+	libterminput_unmarshal_state.3
 
 OBJ =\
 	$(MAN3:.3=.o)\
-	libterminput_marshal_input.o\
-	libterminput_marshal_state.o\
-	libterminput_unmarshal_input.o\
-	libterminput_unmarshal_state.o\
-	libterminput_marshal_keypress__.o\
-	libterminput_marshal_text__.o\
-	libterminput_marshal_mouseevent__.o\
-	libterminput_marshal_position__.o\
-	libterminput_unmarshal_keypress__.o\
-	libterminput_unmarshal_text__.o\
-	libterminput_unmarshal_mouseevent__.o\
-	libterminput_unmarshal_position__.o\
 	libterminput_encode_utf8__.o\
 	libterminput_check_utf8_char__.o\
 	libterminput_utf8_decode__.o\
@@ -44,7 +36,15 @@ OBJ =\
 	libterminput_parse_csi_t_mouse_tracking__.o\
 	libterminput_parse_csi_small_t_mouse_tracking__.o\
 	libterminput_parse_sequence__.o\
-	libterminput_read_symbol__.o
+	libterminput_read_symbol__.o\
+	libterminput_marshal_keypress__.o\
+	libterminput_marshal_text__.o\
+	libterminput_marshal_mouseevent__.o\
+	libterminput_marshal_position__.o\
+	libterminput_unmarshal_keypress__.o\
+	libterminput_unmarshal_text__.o\
+	libterminput_unmarshal_mouseevent__.o\
+	libterminput_unmarshal_position__.o
 
 HDR =\
 	libterminput.h\
