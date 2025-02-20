@@ -3,7 +3,7 @@
 
 
 int
-libterminput_marshal_position__(struct libterminput_marshaller *how, const struct libterminput_position *what)
+libterminput_marshal_position__(struct libterminput_marshaller *how, const struct libterminput_position *what) /* TODO test */
 {
 	return how->store(how, &what->x, sizeof(size_t) * 2U);
 }
