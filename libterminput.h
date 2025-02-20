@@ -692,6 +692,46 @@ struct libterminput_unmarshaller {
 
 
 /**
+ * Initialises the parser
+ * 
+ * Calling this function is optional
+ * 
+ * Before calling this function, it is important to call
+ * `memset(ctx, 0, sizeof(*ctx))` so that `ctx` is properly
+ * marked as fully uninitialised (this is needed because
+ * the execution of the function is resumed by calling it
+ * again after EINTR or EAGAIN failure)
+ * 
+ * In the current version, this function doesn't do anything,
+ * however future versions (or other implementations) may
+ * read to and write from the terminal, read the process's
+ * environment variables, or read from the filesystem in
+ * order to detect the particular quirks of the terminal
+ * 
+ * @param   ctx  Parser state
+ * @param   fd   The file descriptor to the terminal
+ * @return       0 on success, -1 on failure
+ * 
+ * It is unspecified which errors will cause this function
+ * to fail, however it should avoid failing for any other
+ * reason than EINTR and EAGAIN
+ * 
+ * @since  1.1
+ */
+int libterminput_init(struct libterminput_state *ctx, int fd);
+
+/**
+ * Deallocate any resources allocated by `libterminput_init`
+ * 
+ * `ctx` is no longer usable after this function returns
+ * 
+ * @param  ctx  Parser state
+ * 
+ * @since  1.1
+ */
+void libterminput_destroy(struct libterminput_state *ctx);
+
+/**
  * Get input from the terminal
  * 
  * @param   fd     The file descriptor to the terminal

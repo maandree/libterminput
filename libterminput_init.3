@@ -1,0 +1,110 @@
+.TH LIBTERMINPUT_INIT 3 LIBTERMINPUT
+.SH NAME
+libterminput_init \- Configure library for terminal quirks
+.br
+libterminput_destory \- Deallocate library configuration resources
+
+.SH SYNOPSIS
+.nf
+#include <libterminput.h>
+
+int libterminput_init(struct libterminput_state *\fIctx\fP, int \fIfd\fP);
+void libterminput_destroy(struct libterminput_state *\fIctx\fP);
+.fi
+.PP
+Link with
+.IR \-lterminput .
+
+.SH DESCRIPTION
+The current version of the
+.BR libterminput_init ()
+function doesn't do anything. However, future versions
+may communicate with the terminal, inspect the process's
+environment variables, and read the filesystem to determine
+the quirks of the terminal.
+.PP
+Before calling this,
+.I *ctx
+must be initialised by running
+.IR "memset(ctx, 0, sizeof(*ctx))" .
+.PP
+.I fd
+shall be a file descriptor to the terminal with both
+read and write access.
+.PP
+Calling the
+.BR libterminput_init ()
+function will always be optional. However, if the
+function has failed the function must be called again
+(until successful completion), or
+.I *ctx
+must be destroyed using
+.BR libterminput_destroy ()
+and reset with
+.BR memset (3).
+.PP
+The
+.BR libterminput_destroy ()
+function deallocates resources in
+.I *ctx
+allocated by the
+.BR libterminput_init ()
+function.
+
+.SH RETURN VALUE
+The
+.BR libterminput_init ()
+function returns 0 upon successful completion.
+On failure, it returns
+.B -1
+and sets
+.I errno
+to indicate the error.
+.PP
+The
+.BR libterminput_destroy ()
+function does not have a return value.
+
+.SH ERRORS
+The
+.BR libterminput_init ()
+function may fail for any reason, although it should
+avoid failing for any reason other than:
+.TP
+.B EINTR
+Default.
+.TP
+.B AGAIN
+Default.
+.PP
+The
+.BR libterminput_destroy ()
+function cannot fail.
+
+.SH EXAMPLES
+None.
+
+.SH APPLICATION USAGE
+None.
+
+.SH RATIONALE
+None.
+
+.SH FUTURE DIRECTIONS
+None.
+
+.SH HISTORY
+The
+.BR libterminput_init ()
+and
+.BR libterminput_destroy ()
+functions were added in version 1.1 of libterminput.
+
+.SH NOTES
+None.
+
+.SH BUGS
+None.
+
+.SH SEE ALSO
+.BR libterminput_read (3)

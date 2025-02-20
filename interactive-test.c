@@ -32,6 +32,10 @@ main(void)
 	struct sigaction sa;
 
 	memset(&ctx, 0, sizeof(ctx));
+	if (libterminput_init(&ctx, STDIN_FILENO)) {
+		perror("libterminput_init STDIN_FILENO");
+		return 1;
+	}
 
 	memset(&sa, 0, sizeof(sa)); /* importantly, SA_RESTART is cleared from sa.sa_flags */
 	sa.sa_handler = &sigint_handler;
@@ -243,5 +247,7 @@ again:
 	if (!(flags & O_NONBLOCK))
 		fcntl(STDIN_FILENO, F_SETFL, flags);
 	tcsetattr(STDERR_FILENO, TCSAFLUSH, &saved_stty);
+
+	libterminput_destroy(&ctx);
 	return -r && !interrupted;
 }

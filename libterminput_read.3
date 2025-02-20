@@ -158,7 +158,9 @@ returns the result in the
 .I ctx
 must have been zero-initialised, e.g. with
 .BR memset (3)
-function.
+function, and optionally with
+.BR libterminput_init (3)
+afterwards.
 .PP
 .I input
 shall be the same pointer every time the
@@ -439,7 +441,7 @@ function returns
 .B -1
 and set
 .I errno
-it indicate the error.
+to indicate the error.
 
 .SH ERRORS
 The
@@ -467,6 +469,7 @@ None.
 None.
 
 .SH SEE ALSO
+.BR libterminput_init (3),
 .BR libterminput_is_ready (3),
 .BR libterminput_set_flags (3),
 .BR libterminput_marshal_state (3)

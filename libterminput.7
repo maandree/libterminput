@@ -10,6 +10,12 @@ does not use terminfo, but recognises common sequences.
 .PP
 libterminput provides the following functions:
 .TP
+.BR libterminput_init (3)
+Configure library for terminal quirks.
+.TP
+.BR libterminput_destroy (3)
+Deallocate library configuration resources.
+.TP
 .BR libterminput_read (3)
 Read and parse input from the terminal.
 .TP
@@ -21,8 +27,17 @@ Add input parsing flags.
 .TP
 .BR libterminput_clear_flags (3)
 Remove input parsing flags.
+.TP
+.BR libterminput_marshal_state "(3), " libterminput_marshal_input (3)
+Marshal library state.
+.TP
+.BR libterminput_unmarshal_state "(3), " libterminput_unmarshal_input (3)
+Unmarshal library state.
 
 .SH SEE ALSO
+.BR libterminput_init (3),
 .BR libterminput_is_ready (3),
+.BR libterminput_marshal_state (3),
 .BR libterminput_read (3),
-.BR libterminput_set_flags (3)
+.BR libterminput_set_flags (3),
+.BR libterminput_unmarshal_state (3)

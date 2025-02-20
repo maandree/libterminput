@@ -23,7 +23,9 @@ MAN3 =\
 	libterminput_marshal_input.3\
 	libterminput_marshal_state.3\
 	libterminput_unmarshal_input.3\
-	libterminput_unmarshal_state.3
+	libterminput_unmarshal_state.3\
+	libterminput_init.3\
+	libterminput_destroy.3
 
 OBJ =\
 	$(MAN3:.3=.o)\
