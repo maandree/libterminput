@@ -8,6 +8,12 @@ DESCRIPTION
 
 	libterminput provides the following functions:
 
+	libterminput_init(3)
+		Configure library for terminal quirks.
+
+	libterminput_destroy(3)
+		Deallocate library configuration resources.
+
 	libterminput_read(3)
 		Read and parse input from the terminal.
 
@@ -19,3 +25,9 @@ DESCRIPTION
 
 	libterminput_clear_flags(3)
 		Remove input parsing flags.
+
+	libterminput_marshal_state(3), libterminput_marshal_input(3)
+		Marshal library state.
+
+	libterminput_unmarshal_state(3), libterminput_unmarshal_input(3)
+		Unmarshal library state.
