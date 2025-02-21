@@ -3,7 +3,7 @@
 
 
 int
-libterminput_unmarshal_state(struct libterminput_unmarshaller *how, struct libterminput_state *what) /* TODO test */
+libterminput_unmarshal_state(struct libterminput_unmarshaller *how, struct libterminput_state *what)
 {
 	if (how->load(how, what, sizeof(*what)))
 		return -1;

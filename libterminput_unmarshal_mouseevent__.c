@@ -3,7 +3,7 @@
 
 
 int
-libterminput_unmarshal_mouseevent__(struct libterminput_unmarshaller *how, struct libterminput_mouseevent *what) /* TODO test */
+libterminput_unmarshal_mouseevent__(struct libterminput_unmarshaller *how, struct libterminput_mouseevent *what)
 {
 	what->type = LIBTERMINPUT_MOUSEEVENT;
 	if (how->load(how, &what->event, sizeof(what->event)) ||

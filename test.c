@@ -1,6 +1,7 @@
 /* See LICENSE file for copyright and license details. */
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -360,6 +361,54 @@ static struct libterminput_state ctx;
 static union libterminput_input input;
 static int fds[2];
 
+static char *marshalled = NULL;
+static size_t nmarshalled = 0;
+static size_t nunmarshalled = 0;
+static size_t marshalled_size = 0;
+
+
+static int
+store(struct libterminput_marshaller *this, const void *data, size_t size)
+{
+	(void) this;
+	if (size > marshalled_size - nmarshalled) {
+		TEST(size < SIZE_MAX - nmarshalled);
+		marshalled_size = nmarshalled + size;
+		TEST((marshalled = realloc(marshalled, marshalled_size)));
+	}
+	memcpy(&marshalled[nmarshalled], data, size);
+	nmarshalled += size;
+	return 0;
+}
+
+
+static int
+load(struct libterminput_unmarshaller *this, void *data, size_t size)
+{
+	(void) this;
+	TEST(nunmarshalled <= nmarshalled);
+	TEST(size <= nmarshalled - nunmarshalled);
+	memcpy(data, &marshalled[nunmarshalled], size);
+	nunmarshalled += size;
+	return 0;
+}
+
+
+static struct libterminput_marshaller marshaller = {.store = &store};
+static struct libterminput_unmarshaller unmarshaller = {.load = &load};
+
+
+static void
+check_ctx_marshal(void)
+{
+	struct libterminput_state old_ctx;
+	memcpy(&old_ctx, &ctx, sizeof(ctx));
+	TEST(!libterminput_marshal_state(&marshaller, &ctx));
+	memset(&ctx, 255, sizeof(ctx));
+	TEST(!libterminput_unmarshal_state(&unmarshaller, &ctx));
+	TEST(!memcmp(&old_ctx, &ctx, sizeof(ctx)));
+}
+
 
 static void
 type_mem(const char *str, size_t len, enum libterminput_type type)
@@ -371,14 +420,17 @@ type_mem(const char *str, size_t len, enum libterminput_type type)
 	TEST((flags = fcntl(fds[0], F_GETFL)) >= 0);
 	if (flags & O_NONBLOCK) {
 		do {
+			check_ctx_marshal();
 			r = libterminput_read(fds[0], &input, &ctx);
 			TEST(r == 1 || (r == -1 && errno == EAGAIN));
 		} while (input.type == LIBTERMINPUT_NONE && r > 0);
 	} else {
 		do {
+			check_ctx_marshal();
 			TEST(libterminput_read(fds[0], &input, &ctx) == 1);
 		} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
 	}
+	check_ctx_marshal();
 	TEST(input.type == type);
 }
 
@@ -397,14 +449,17 @@ keypress_(const char *str1, const char *str2, const char *str3, const char *str4
 	for (times_ = times; times_; times_--) {
 		if (flags & O_NONBLOCK) {
 			do {
+				check_ctx_marshal();
 				r = libterminput_read(fds[0], &input, &ctx);
 				TEST(r == 1 || (r == -1 && errno == EAGAIN));
 			} while (input.type == LIBTERMINPUT_NONE && r > 0);
 		} else {
 			do {
+				check_ctx_marshal();
 				TEST(libterminput_read(fds[0], &input, &ctx) == 1);
 			} while (input.type == LIBTERMINPUT_NONE && libterminput_is_ready(&input, &ctx));
 		}
+		check_ctx_marshal();
 		TEST(input.type == LIBTERMINPUT_KEYPRESS);
 		TEST(input.keypress.key == key);
 		TEST(input.keypress.mods == mods);
@@ -415,9 +470,11 @@ keypress_(const char *str1, const char *str2, const char *str3, const char *str4
 			TEST(write(fds[1], &buffer[i], 1) == 1);
 			TEST(libterminput_read(fds[0], &input, &ctx) == 1);
 			TEST(input.type == LIBTERMINPUT_NONE);
+			check_ctx_marshal();
 		}
 		TEST(write(fds[1], &buffer[i], 1) == 1);
 		TEST(libterminput_read(fds[0], &input, &ctx) == 1);
+		check_ctx_marshal();
 		TEST(input.keypress.key == key);
 		TEST(input.keypress.mods == mods);
 		TEST(input.keypress.times == times);
@@ -545,6 +602,319 @@ main(void)
 {
 	size_t i;
 	int flags;
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_BRACKETED_PASTE_START;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	input.type = LIBTERMINPUT_NONE;
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_BRACKETED_PASTE_START);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_BRACKETED_PASTE_END;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	input.type = LIBTERMINPUT_NONE;
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_BRACKETED_PASTE_END);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_TERMINAL_IS_OK;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	input.type = LIBTERMINPUT_NONE;
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_TERMINAL_IS_OK);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_TERMINAL_IS_NOT_OK;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	input.type = LIBTERMINPUT_NONE;
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_TERMINAL_IS_NOT_OK);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_CURSOR_POSITION;
+	input.position.x = 5U;
+	input.position.y = 10U;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_CURSOR_POSITION);
+	TEST(input.position.x == 5U);
+	TEST(input.position.y == 10U);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_TEXT;
+	input.text.nbytes = 10U;
+	stpcpy(input.text.bytes, "1234567890");
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_TEXT);
+	TEST(input.text.nbytes == 10U);
+	TEST(!memcmp(input.text.bytes, "1234567890", 10U));
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_TEXT;
+	input.text.nbytes = sizeof(input.text.bytes);
+	memset(input.text.bytes, 1, input.text.nbytes);
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_TEXT);
+	TEST(input.text.nbytes == sizeof(input.text.bytes));
+	TEST(input.text.bytes[0] == 1);
+	TEST(input.text.bytes[input.text.nbytes - 1U] == 1);
+
+	errno = 0;
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_TEXT;
+	input.text.nbytes = sizeof(input.text.bytes);
+	memset(input.text.bytes, 2, sizeof(input.text.bytes));
+	TEST(!marshaller.store(&marshaller, &input.type, sizeof(input.type)));
+	TEST(!marshaller.store(&marshaller, &input.text.nbytes, sizeof(input.text.nbytes)));
+	TEST(!marshaller.store(&marshaller, input.text.bytes, sizeof(input.text.bytes)));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_TEXT);
+	TEST(input.text.nbytes == sizeof(input.text.bytes));
+	TEST(input.text.bytes[0] == 2);
+	TEST(input.text.bytes[input.text.nbytes - 1U] == 2);
+
+	errno = 0;
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_TEXT;
+	input.text.nbytes = sizeof(input.text.bytes) + 1U;
+	TEST(!marshaller.store(&marshaller, &input.type, sizeof(input.type)));
+	TEST(!marshaller.store(&marshaller, &input.text.nbytes, sizeof(input.text.nbytes)));
+	TEST(!marshaller.store(&marshaller, input.text.bytes, sizeof(input.text.bytes)));
+	TEST(!marshaller.store(&marshaller, input.text.bytes, 1U));
+	TEST(libterminput_unmarshal_input(&unmarshaller, &input)== -1 && errno == EINVAL);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_MOUSEEVENT;
+	input.mouseevent.mods = 9;
+	input.mouseevent.button = 7;
+	input.mouseevent.event = LIBTERMINPUT_PRESS;
+	input.mouseevent.x = 13U;
+	input.mouseevent.y = 21U;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_MOUSEEVENT);
+	TEST(input.mouseevent.mods == 9);
+	TEST(input.mouseevent.button == 7);
+	TEST(input.mouseevent.event == LIBTERMINPUT_PRESS);
+	TEST(input.mouseevent.x == 13U);
+	TEST(input.mouseevent.y == 21U);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_MOUSEEVENT;
+	input.mouseevent.mods = 77;
+	input.mouseevent.button = 88;
+	input.mouseevent.event = LIBTERMINPUT_RELEASE;
+	input.mouseevent.x = 41U;
+	input.mouseevent.y = 22U;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_MOUSEEVENT);
+	TEST(input.mouseevent.mods == 77);
+	TEST(input.mouseevent.button == 88);
+	TEST(input.mouseevent.event == LIBTERMINPUT_RELEASE);
+	TEST(input.mouseevent.x == 41U);
+	TEST(input.mouseevent.y == 22U);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_MOUSEEVENT;
+	input.mouseevent.mods = 12;
+	input.mouseevent.button = 14;
+	input.mouseevent.event = LIBTERMINPUT_MOTION;
+	input.mouseevent.x = 42U;
+	input.mouseevent.y = 23U;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_MOUSEEVENT);
+	TEST(input.mouseevent.mods == 12);
+	TEST(input.mouseevent.button == 14);
+	TEST(input.mouseevent.event == LIBTERMINPUT_MOTION);
+	TEST(input.mouseevent.x == 42U);
+	TEST(input.mouseevent.y == 23U);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_MOUSEEVENT;
+	input.mouseevent.mods = 99; /* invalid, will be set to 0 */
+	input.mouseevent.button = 99; /* invalid, will be set to 1 */
+	input.mouseevent.event = LIBTERMINPUT_HIGHLIGHT_INSIDE;
+	input.mouseevent.x = 52U;
+	input.mouseevent.y = 53U;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_MOUSEEVENT);
+	TEST(input.mouseevent.mods == 0);
+	TEST(input.mouseevent.button == 1);
+	TEST(input.mouseevent.event == LIBTERMINPUT_HIGHLIGHT_INSIDE);
+	TEST(input.mouseevent.x == 52U);
+	TEST(input.mouseevent.y == 53U);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_MOUSEEVENT;
+	input.mouseevent.mods = 99; /* invalid, will be set to 0 */
+	input.mouseevent.button = 99; /* invalid, will be set to 1 */
+	input.mouseevent.event = LIBTERMINPUT_HIGHLIGHT_OUTSIDE;
+	input.mouseevent.x = 62U;
+	input.mouseevent.y = 63U;
+	input.mouseevent.start_x = 12U;
+	input.mouseevent.start_y = 13U;
+	input.mouseevent.end_x = 22U;
+	input.mouseevent.end_y = 23U;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_MOUSEEVENT);
+	TEST(input.mouseevent.mods == 0);
+	TEST(input.mouseevent.button == 1);
+	TEST(input.mouseevent.event == LIBTERMINPUT_HIGHLIGHT_OUTSIDE);
+	TEST(input.mouseevent.x == 62U);
+	TEST(input.mouseevent.y == 63U);
+	TEST(input.mouseevent.start_x == 12U);
+	TEST(input.mouseevent.start_y == 13U);
+	TEST(input.mouseevent.end_x == 22U);
+	TEST(input.mouseevent.end_y == 23U);
+
+	errno = 0;
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_MOUSEEVENT;
+	input.mouseevent.mods = 1;
+	input.mouseevent.button = 1;
+	input.mouseevent.event = (enum libterminput_event)99999;
+	input.mouseevent.x = 1U;
+	input.mouseevent.y = 1U;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	TEST(libterminput_unmarshal_input(&unmarshaller, &input) == -1 && errno == EINVAL);
+
+	errno = 0;
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_MOUSEEVENT;
+	input.mouseevent.mods = 1;
+	input.mouseevent.button = 1;
+	input.mouseevent.event = (enum libterminput_event)-1;
+	input.mouseevent.x = 1U;
+	input.mouseevent.y = 1U;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	TEST(libterminput_unmarshal_input(&unmarshaller, &input) == -1 && errno == EINVAL);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_KEYPRESS;
+	input.keypress.key = LIBTERMINPUT_UP;
+	input.keypress.times = 0;
+	input.keypress.mods = 0;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_UP);
+	TEST(input.keypress.times == 0);
+	TEST(input.keypress.mods == 0);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_KEYPRESS;
+	input.keypress.key = LIBTERMINPUT_LAST_KEY__;
+	input.keypress.times = 1;
+	input.keypress.mods = 7;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_LAST_KEY__);
+	TEST(input.keypress.times == 1);
+	TEST(input.keypress.mods == 7);
+
+	errno = 0;
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_KEYPRESS;
+	input.keypress.key = (enum libterminput_key)(LIBTERMINPUT_LAST_KEY__ + 1);
+	input.keypress.times = 1;
+	input.keypress.mods = 7;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	TEST(libterminput_unmarshal_input(&unmarshaller, &input) == -1 && errno == EINVAL);
+
+	errno = 0;
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_KEYPRESS;
+	input.keypress.key = (enum libterminput_key)-1;
+	input.keypress.times = 1;
+	input.keypress.mods = 7;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	TEST(libterminput_unmarshal_input(&unmarshaller, &input) == -1 && errno == EINVAL);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_KEYPRESS;
+	input.keypress.key = LIBTERMINPUT_SYMBOL;
+	input.keypress.times = 5;
+	input.keypress.mods = 10;
+	stpcpy(input.keypress.symbol, "\xFD\x82\x83\x84\x85\x86");
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_KEYPRESS);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
+	TEST(input.keypress.times == 5);
+	TEST(input.keypress.mods == 10);
+	TEST(!memcmp(input.keypress.symbol, "\xFD\x82\x83\x84\x85\x86", 7U));
+
+	errno = 0;
+	nunmarshalled = nmarshalled = 0;
+	input.type = (enum libterminput_type)-1;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	TEST(libterminput_unmarshal_input(&unmarshaller, &input) == -1 && errno == EINVAL);
+
+	errno = 0;
+	nunmarshalled = nmarshalled = 0;
+	input.type = (enum libterminput_type)99;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	TEST(libterminput_unmarshal_input(&unmarshaller, &input) == -1 && errno == EINVAL);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_NONE;
+	input.keypress.key = LIBTERMINPUT_LEFT;
+	input.keypress.times = 5;
+	input.keypress.mods = 8;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_NONE);
+	TEST(input.keypress.key == LIBTERMINPUT_LEFT);
+	TEST(input.keypress.times == 5);
+	TEST(input.keypress.mods == 8);
+
+	nunmarshalled = nmarshalled = 0;
+	input.type = LIBTERMINPUT_NONE;
+	input.keypress.key = LIBTERMINPUT_SYMBOL;
+	TEST(!libterminput_marshal_input(&marshaller, &input));
+	memset(&input, 0, sizeof(input));
+	TEST(!libterminput_unmarshal_input(&unmarshaller, &input));
+	TEST(nunmarshalled == nmarshalled);
+	TEST(input.type == LIBTERMINPUT_NONE);
+	TEST(input.keypress.key == LIBTERMINPUT_SYMBOL);
 
 	memset(&ctx, 0, sizeof(ctx));
 	TEST(!pipe(fds));
@@ -1048,5 +1418,7 @@ main(void)
 	TEST(libterminput_read(fds[0], &input, &ctx) == 0);
 	close(fds[0]);
 	TEST(libterminput_read(fds[0], &input, &ctx) == -1 && errno == EBADF);
+
+	free(marshalled);
 	return 0;
 }

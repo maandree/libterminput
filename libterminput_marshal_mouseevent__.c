@@ -3,7 +3,7 @@
 
 
 int
-libterminput_marshal_mouseevent__(struct libterminput_marshaller *how, const struct libterminput_mouseevent *what) /* TODO test */
+libterminput_marshal_mouseevent__(struct libterminput_marshaller *how, const struct libterminput_mouseevent *what)
 {
 	if (how->store(how, &what->event, sizeof(what->event)) ||
 	    how->store(how, &what->x, sizeof(size_t) * 2U))

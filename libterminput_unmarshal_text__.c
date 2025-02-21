@@ -3,7 +3,7 @@
 
 
 int
-libterminput_unmarshal_text__(struct libterminput_unmarshaller *how, struct libterminput_text *what) /* TODO test */
+libterminput_unmarshal_text__(struct libterminput_unmarshaller *how, struct libterminput_text *what)
 {
 	what->type = LIBTERMINPUT_TEXT;
 	if (how->load(how, &what->nbytes, sizeof(what->nbytes)))

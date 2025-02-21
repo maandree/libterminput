@@ -3,13 +3,13 @@
 
 
 int
-libterminput_marshal_input(struct libterminput_marshaller *how, const union libterminput_input *what) /* TODO test */
+libterminput_marshal_input(struct libterminput_marshaller *how, const union libterminput_input *what)
 {
 	enum libterminput_type type = what->type;
 	if (how->store(how, &type, sizeof(type)))
 		return -1;
 	if (type == LIBTERMINPUT_NONE) {
-		if (what->keypress.key == LIBTERMINPUT_SYMBOL)
+		if (what->keypress.key != LIBTERMINPUT_SYMBOL)
 			type = LIBTERMINPUT_KEYPRESS;
 		if (how->store(how, &type, sizeof(type)))
 			return -1;

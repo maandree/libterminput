@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +12,67 @@
 #include "libterminput.h"
 
 
+#define TEST(EXPR)\
+	do {\
+		if (EXPR)\
+			break;\
+		fprintf(stderr, "Failure at line %i, with errno = %i (%s): %s\n",\
+		        __LINE__, errno, strerror(errno), #EXPR);\
+		exit(1);\
+	} while (0)
+
+
 static volatile sig_atomic_t interrupted = 0;
+
+static struct libterminput_state ctx;
+
+static char *marshalled = NULL;
+static size_t nmarshalled = 0;
+static size_t nunmarshalled = 0;
+static size_t marshalled_size = 0;
+
+
+static int
+store(struct libterminput_marshaller *this, const void *data, size_t size)
+{
+	(void) this;
+	if (size > marshalled_size - nmarshalled) {
+		TEST(size < SIZE_MAX - nmarshalled);
+		marshalled_size = nmarshalled + size;
+		TEST((marshalled = realloc(marshalled, marshalled_size)));
+	}
+	memcpy(&marshalled[nmarshalled], data, size);
+	nmarshalled += size;
+	return 0;
+}
+
+
+static int
+load(struct libterminput_unmarshaller *this, void *data, size_t size)
+{
+	(void) this;
+	TEST(nunmarshalled <= nmarshalled);
+	TEST(size <= nmarshalled - nunmarshalled);
+	memcpy(data, &marshalled[nunmarshalled], size);
+	nunmarshalled += size;
+	return 0;
+}
+
+
+static struct libterminput_marshaller marshaller = {.store = &store};
+static struct libterminput_unmarshaller unmarshaller = {.load = &load};
+
+
+static void
+check_ctx_marshal(void)
+{
+	struct libterminput_state old_ctx;
+	memcpy(&old_ctx, &ctx, sizeof(ctx));
+	TEST(!libterminput_marshal_state(&marshaller, &ctx));
+	memset(&ctx, 255, sizeof(ctx));
+	TEST(!libterminput_unmarshal_state(&unmarshaller, &ctx));
+	TEST(!memcmp(&old_ctx, &ctx, sizeof(ctx)));
+}
 
 
 static void
@@ -25,7 +86,6 @@ sigint_handler(int signo)
 int
 main(void)
 {
-	struct libterminput_state ctx;
 	union libterminput_input input;
 	struct termios stty, saved_stty;
 	int r, print_state, flags;
@@ -96,6 +156,7 @@ main(void)
 
 again:
 	while ((r = libterminput_read(STDIN_FILENO, &input, &ctx)) > 0) {
+		check_ctx_marshal();
 		if (input.type == LIBTERMINPUT_NONE) {
 			printf("none\n");
 		} else if (input.type == LIBTERMINPUT_KEYPRESS) {
@@ -232,6 +293,7 @@ again:
 			       (int)(ctx.stored_tail - ctx.stored_head), &ctx.stored[ctx.stored_head]);
 		}
 	}
+	check_ctx_marshal();
 
 	if (r < 0 && !interrupted) {
 		if (errno == EAGAIN) {
@@ -249,5 +311,6 @@ again:
 	tcsetattr(STDERR_FILENO, TCSAFLUSH, &saved_stty);
 
 	libterminput_destroy(&ctx);
+	free(marshalled);
 	return -r && !interrupted;
 }

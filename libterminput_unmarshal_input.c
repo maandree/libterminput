@@ -3,7 +3,7 @@
 
 
 int
-libterminput_unmarshal_input(struct libterminput_unmarshaller *how, union libterminput_input *what) /* TODO test */
+libterminput_unmarshal_input(struct libterminput_unmarshaller *how, union libterminput_input *what)
 {
 	enum libterminput_type type;
 	int r;

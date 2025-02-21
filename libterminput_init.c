@@ -10,5 +10,5 @@ libterminput_init(struct libterminput_state *ctx, int fd)
 {
 	(void) ctx;
 	(void) fd;
-	return -1;
+	return 0;
 }

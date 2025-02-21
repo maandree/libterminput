@@ -3,8 +3,10 @@
 
 
 int
-libterminput_marshal_text__(struct libterminput_marshaller *how, const struct libterminput_text *what) /* TODO test */
+libterminput_marshal_text__(struct libterminput_marshaller *how, const struct libterminput_text *what)
 {
+	if (what->nbytes > sizeof(what->bytes))
+		abort();
 	if (how->store(how, &what->nbytes, sizeof(what->nbytes)) ||
 	    how->store(how, what->bytes, what->nbytes))
 		return -1;
