@@ -6,7 +6,7 @@ include $(CONFIGFILE)
 OS = linux
 # Linux:   linux
 # Mac OS:  macos
-# Windows: windows 
+# Windows: windows
 include mk/$(OS).mk
 
 

@@ -32,7 +32,7 @@
 
 
 /**
- * Singlar read symbol
+ * Singular read symbol
  */
 struct input {
 	/**

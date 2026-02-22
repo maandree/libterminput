@@ -15,13 +15,13 @@ Link with
 .SH DESCRIPTION
 The
 .BR libterminput_is_ready ()
-function check if a call to the
+function checks if a call to the
 .BR libterminput_read (3)
 function will skip reading from the file
 descriptor passed to it because it already
 has read data buffered. However, if there
 is buffered data but the library knows it
-it not enough to return something they,
+is not enough to return anything yet,
 it will also return that there is nothing
 buffered.
 .PP
